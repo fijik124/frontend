@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import blog from '@/components/blog.vue'
+import ComponentA from '@/components/componenta.vue'
 import ActualTabs from './components/ActualTabs.vue';
 import InstagramProfiles from './components/InstagramProfiles.vue';
 
@@ -16,12 +17,24 @@ const datai = ref([
     { url: 'https://picsum.photos/200/201', width: '66', height: '66', name: 'Profile 3' }
 ])
 
+const inputa = ref(0)
+const message = ref('')
 
+watch(inputa, (newValue, oldValue) => {
+    if (newValue < 0) {
+        inputa.value = 0
+    }
+    if (newValue > 100) {
+        inputa.value = 100
+    }
+    message.value = `Hodnota byla změněna z ${oldValue} na ${newValue}`
+})
 </script>
 
 <template>
-<actual-tabs :data="data" />
-<instagram-profiles :data="datai" />
+<input v-model="inputa" type="number" placeholder="Zadejte číslo" />
+<ComponentA :cifra="inputa" />
+<p>{{ message }}</p>
 </template>
 
 
