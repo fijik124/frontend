@@ -1,49 +1,27 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import blog from '@/components/blog.vue'
+import ActualTabs from './components/ActualTabs.vue';
+import InstagramProfiles from './components/InstagramProfiles.vue';
 
-const items = ref([{
- name: "Ďuso",
- znamka: 2,
-},
-{
- name: "Peťo",
- znamka: 3,
-}, {
-  name: "Fero",
-  znamka: 1,
-}])
+const data = ref([
+    { url: 'https://picsum.photos/200/200', width: '45', height: '45', title: 'Image 1' },
+    { url: 'https://picsum.photos/200/202', width: '45', height: '45', title: 'Image 2' },
+    { url: 'https://picsum.photos/200/201', width: '45', height: '45', title: 'Image 3' }
+])
 
-const name = ref<string>('')
-const znamka = ref<number>(0)
+const datai = ref([
+    { url: 'https://picsum.photos/200/200', width: '66', height: '66', name: 'Profile 1' },
+    { url: 'https://picsum.photos/200/202', width: '66', height: '66', name: 'Profile 2' },
+    { url: 'https://picsum.photos/200/201', width: '66', height: '66', name: 'Profile 3' }
+])
 
 
 </script>
 
 <template>
-  <div>
-    <li v-for="(item, index) in items" key="index">
-      {{ index }} - {{ item.name }} - 
-	  {{ item.znamka }} <input v-model="item.name" /><button @click="items.splice(index, 1)">Odstrániť</button>
-    </li>
-
-
-
-  <p>Priemerna znamka: {{ items.reduce((sum, item) => sum + item.znamka, 0) / items.length || 0 }}</p>
-  <div><form @submit.prevent>
-  <input type="text" v-model="name" />
-  <input type="number" v-model.number="znamka" />
-
-  <button
-    type="submit"
-    @click="items.push({ name, znamka })"
-  >
-    Pridať
-  </button>
-</form></div>
-
-	<span v-for="n in 10">{{ n }}</span>
-
-  </div>
+<actual-tabs :data="data" />
+<instagram-profiles :data="datai" />
 </template>
 
 
