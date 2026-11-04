@@ -16,8 +16,10 @@ export interface ClubRole { id: string; name: string; description: string; permi
 const defaultRoles = (): ClubRole[] => [
   { id: 'admin', name: 'Správca', description: 'Úplný prístup k správe združenia.', permissions: permissionOptions.map(permission => permission.id), protected: true },
   { id: 'member', name: 'Člen', description: 'Vlastný profil, členská licencia a informácie o klube.', permissions: [], protected: true },
+  { id: 'rider', name: 'Jazdec', description: 'Člen klubu, ktorý sa venuje jazdeniu a pretekom.', permissions: [], protected: false },
+  { id: 'volunteer', name: 'Dobrovoľník', description: 'Pomáha s organizáciou a klubovými aktivitami.', permissions: [], protected: false },
+  { id: 'supporter', name: 'Podporovateľ', description: 'Podporuje klub a komunitu motokrosu.', permissions: [], protected: false },
 ]
-export type MemberGroup = 'Jazdec' | 'Dobrovoľník' | 'Podporovateľ' | 'Neurčené'
 export interface Member {
   id: string
   firstName: string
@@ -25,7 +27,6 @@ export interface Member {
   name: string
   email: string
   phone: string
-  group: MemberGroup
   status: MemberStatus
   role: MemberRole
   joinedAt: string
@@ -45,7 +46,7 @@ export interface MemberLicense {
   role: MemberRole
 }
 interface Activity { id: string; text: string; at: string }
-interface DemoData { version: 4; members: Member[]; licenses: MemberLicense[]; roles: ClubRole[]; activity: Activity[] }
+interface DemoData { version: 5; members: Member[]; licenses: MemberLicense[]; roles: ClubRole[]; activity: Activity[] }
 
 const DATA_KEY = 'amk-members-demo-v1'
 const SESSION_KEY = 'amk-member-session-v1'
@@ -68,7 +69,7 @@ function licenseCode(existing: MemberLicense[] = []) {
   return code
 }
 export const statusLabels: Record<MemberStatus, string> = { active: 'Aktívny', pending: 'Čaká na schválenie', inactive: 'Neaktívny' }
-export const groupOptions: MemberGroup[] = ['Jazdec', 'Dobrovoľník', 'Podporovateľ', 'Neurčené']
+const legacyRole = (group?: string) => (({ Jazdec: 'rider', Dobrovoľník: 'volunteer', Podporovateľ: 'supporter' } as Record<string, string>)[group ?? ''] ?? 'member')
 const seedNames = [
   ['Martin Kováč', 'spravca@amk-demo.example', 'Dobrovoľník', 'admin', 'active', ''],
   ['Tomáš Švec', 'jazdec@amk-demo.example', 'Jazdec', 'member', 'active', '127'],
@@ -83,8 +84,8 @@ export const useMembershipStore = defineStore('membership', () => {
   const storageError = ref('')
   function seed(): DemoData {
     const initial: DemoData = {
-      version: 4,
-      members: seedNames.map((row, index) => ({ id: 'AMK-' + String(index + 1).padStart(3, '0'), firstName: row[0]!.split(' ')[0]!, lastName: row[0]!.split(' ').slice(1).join(' '), name: row[0]!, email: row[1]!, phone: '', group: row[2] as MemberGroup, role: row[3] as MemberRole, status: row[4] as MemberStatus, number: row[5]!, joinedAt: new Date(Date.now() - (80 - index * 7) * 86400000).toISOString(), feePaid: index < 3 || index === 6 })),
+      version: 5,
+      members: seedNames.map((row, index) => ({ id: 'AMK-' + String(index + 1).padStart(3, '0'), firstName: row[0]!.split(' ')[0]!, lastName: row[0]!.split(' ').slice(1).join(' '), name: row[0]!, email: row[1]!, phone: '', role: row[3] === 'admin' ? 'admin' : legacyRole(row[2]), status: row[4] as MemberStatus, number: row[5]!, joinedAt: new Date(Date.now() - (80 - index * 7) * 86400000).toISOString(), feePaid: index < 3 || index === 6 })),
       licenses: [],
       roles: defaultRoles(),
       activity: [{ id: crypto.randomUUID(), text: 'Ukážková členská databáza je pripravená. Nové registrácie vyžadujú licenciu od správcu.', at: new Date().toISOString() }],
@@ -100,10 +101,10 @@ export const useMembershipStore = defineStore('membership', () => {
   function validData(input: unknown): input is DemoData {
     if (!input || typeof input !== 'object') return false
     const data = input as DemoData
-    if (data.version !== 4 || !Array.isArray(data.members) || !Array.isArray(data.licenses) || !Array.isArray(data.roles) || !Array.isArray(data.activity)) return false
+    if (data.version !== 5 || !Array.isArray(data.members) || !Array.isArray(data.licenses) || !Array.isArray(data.roles) || !Array.isArray(data.activity)) return false
     if (!data.roles.every(role => role && typeof role.id === 'string' && typeof role.name === 'string' && typeof role.description === 'string' && typeof role.protected === 'boolean' && Array.isArray(role.permissions) && role.permissions.every(permission => permissionOptions.some(option => option.id === permission)))) return false
     if (!data.roles.some(role => role.id === 'admin') || !data.roles.some(role => role.id === 'member') || new Set(data.roles.map(role => role.id)).size !== data.roles.length) return false
-    return data.members.every(m => m && typeof m.id === 'string' && typeof m.firstName === 'string' && typeof m.lastName === 'string' && typeof m.name === 'string' && typeof m.email === 'string' && typeof m.phone === 'string' && typeof m.number === 'string' && typeof m.feePaid === 'boolean' && typeof m.joinedAt === 'string' && Number.isFinite(Date.parse(m.joinedAt)) && groupOptions.includes(m.group) && ['active', 'pending', 'inactive'].includes(m.status) && data.roles.some(role => role.id === m.role))
+    return data.members.every(m => m && typeof m.id === 'string' && typeof m.firstName === 'string' && typeof m.lastName === 'string' && typeof m.name === 'string' && typeof m.email === 'string' && typeof m.phone === 'string' && typeof m.number === 'string' && typeof m.feePaid === 'boolean' && typeof m.joinedAt === 'string' && Number.isFinite(Date.parse(m.joinedAt)) && ['active', 'pending', 'inactive'].includes(m.status) && data.roles.some(role => role.id === m.role))
       && new Set(data.members.map(m => m.id)).size === data.members.length
       && new Set(data.members.map(m => m.email.toLowerCase())).size === data.members.length
       && data.members.some(m => m.role === 'admin' && m.status === 'active')
@@ -116,11 +117,16 @@ export const useMembershipStore = defineStore('membership', () => {
       const raw = localStorage.getItem(DATA_KEY)
       if (raw) {
         let parsed: unknown = JSON.parse(raw)
-        if (parsed && typeof parsed === 'object' && 'version' in parsed && [1, 2, 3].includes(parsed.version as number)) {
-          const old = parsed as unknown as { members: Member[]; licenses?: MemberLicense[]; activity: Activity[] }
-          parsed = { ...old, version: 4, roles: defaultRoles(), members: old.members.map(member => ({ ...member, firstName: member.firstName ?? member.name.split(' ')[0], lastName: member.lastName ?? member.name.split(' ').slice(1).join(' ') })), licenses: (old.licenses ?? []).map(license => ({ ...license, validUntil: license.validUntil ?? null, role: license.role ?? old.members.find(member => member.id === license.memberId)?.role ?? 'member' })) }
-        }
-        if (validData(parsed)) { attachMemberLicenses(parsed); return parsed }
+        if (parsed && typeof parsed === 'object' && 'version' in parsed && [1, 2, 3, 4].includes(parsed.version as number)) {
+        const old = parsed as unknown as { members: Array<Member & { group?: string }>; licenses?: MemberLicense[]; roles?: ClubRole[]; activity: Activity[] }
+        const migratedMembers = old.members.map(member => {
+          const { group, ...record } = member
+          return { ...record, firstName: member.firstName ?? member.name.split(' ')[0]!, lastName: member.lastName ?? member.name.split(' ').slice(1).join(' '), role: member.role === 'member' ? legacyRole(group) : member.role }
+        })
+        const migratedRoles = old.roles ? [...old.roles, ...defaultRoles().filter(role => !old.roles!.some(existing => existing.id === role.id))] : defaultRoles()
+        parsed = { ...old, version: 5, roles: migratedRoles, members: migratedMembers, licenses: (old.licenses ?? []).map(license => ({ ...license, validUntil: license.validUntil ?? null, role: migratedMembers.find(member => member.id === license.memberId)?.role ?? license.role ?? 'member' })) }
+      }
+      if (validData(parsed)) { attachMemberLicenses(parsed); return parsed }
         storageError.value = 'Uložené demo údaje sa nepodarilo načítať. Zobrazuje sa nová ukážka.'
       }
       const initial = seed()
@@ -156,12 +162,11 @@ export const useMembershipStore = defineStore('membership', () => {
   function requireAdmin() { if (!isAdmin.value) throw new Error('Táto akcia je dostupná iba správcovi demo databázy.') }
   function requirePermission(permission: Permission) { if (!hasPermission(permission)) throw new Error('Tvoja rola nemá oprávnenie na túto akciu.') }
   function validate(input: MemberInput, exceptId?: string): MemberInput {
-    const clean = { ...input, firstName: cleanName(input.firstName), lastName: cleanName(input.lastName), name: cleanName(input.firstName) + ' ' + cleanName(input.lastName), email: input.email.trim().toLowerCase(), phone: input.phone.trim(), number: input.number.trim() }
+    const clean: MemberInput = { firstName: cleanName(input.firstName), lastName: cleanName(input.lastName), name: cleanName(input.firstName) + ' ' + cleanName(input.lastName), email: input.email.trim().toLowerCase(), phone: input.phone.trim(), number: input.number.trim(), role: input.role, status: input.status, feePaid: input.feePaid }
     if (clean.firstName.length < 2 || clean.lastName.length < 2) throw new Error('Zadaj meno aj priezvisko, každé aspoň s 2 znakmi.')
     if (clean.name.length < 3 || clean.name.length > 100) throw new Error('Zadaj meno a priezvisko v rozsahu 3 až 100 znakov.')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean.email)) throw new Error('Zadaj platnú emailovú adresu.')
     if (members.value.some(m => m.email.toLowerCase() === clean.email && m.id !== exceptId)) throw new Error('Člen s touto emailovou adresou už existuje.')
-    if (!groupOptions.includes(clean.group)) throw new Error('Vyber platnú skupinu členstva.')
     if (!['active', 'pending', 'inactive'].includes(clean.status) || !roles.value.some(role => role.id === clean.role)) throw new Error('Neplatný stav alebo rola člena.')
     if (clean.phone.length > 30 || clean.number.length > 8) throw new Error('Telefón alebo štartové číslo je príliš dlhé.')
     return clean
@@ -178,7 +183,7 @@ export const useMembershipStore = defineStore('membership', () => {
     setSession(member.id)
   }
   function loginDemo(role: MemberRole) {
-    const member = members.value.find(m => m.role === role && m.status === 'active')
+    const member = members.value.find(m => m.status === 'active' && (role === 'member' ? !roles.value.find(item => item.id === m.role)?.permissions.length : m.role === role))
     if (!member) throw new Error('Aktívny ukážkový účet pre túto rolu nie je dostupný.')
     setSession(member.id)
   }
@@ -226,7 +231,7 @@ export const useMembershipStore = defineStore('membership', () => {
   function createMember(input: MemberInput, registration?: { code: string; firstName: string; lastName: string }, validity: string | null = null) {
     if (!registration) { requirePermission('members.write'); if (input.role !== 'member') requirePermission('roles.assign') }
     const license = registration ? verifyLicense(registration.code, registration.firstName, registration.lastName) : null
-    const clean = validate(registration && license ? { ...input, firstName: cleanName(registration.firstName), lastName: cleanName(registration.lastName), group: 'Neurčené', phone: '', number: '', role: license.role, status: 'pending', feePaid: false } : input)
+    const clean = validate(registration && license ? { ...input, firstName: cleanName(registration.firstName), lastName: cleanName(registration.lastName), phone: '', number: '', role: license.role, status: 'pending', feePaid: false } : input)
     if (!validExpiry(validity) || (validity && validity < todaySlovakia())) throw new Error('Platnosť licencie musí byť dnešný alebo budúci dátum.')
     const next = nextData()
     const id = 'AMK-' + crypto.randomUUID().slice(0, 8).toUpperCase()

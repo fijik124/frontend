@@ -5,6 +5,7 @@ import RaceIcon from './RaceIcon.vue'
 const active = ref(false)
 const bike = ref<HTMLElement | null>(null)
 const launchButton = ref<HTMLButtonElement | null>(null)
+const heroTarget = ref<HTMLElement | null>(null)
 const currentStop = ref('Štart / Tvoj svet')
 const distance = ref(0)
 const keys = new Set<string>()
@@ -44,13 +45,13 @@ async function start() {
   bike.value?.focus({ preventScroll: true })
   frame = requestAnimationFrame(tick)
 }
-async function stop() {
+async function stop(restoreFocus = true) {
   active.value = false
   keys.clear()
   cancelAnimationFrame(frame)
   frame = 0
   await nextTick()
-  launchButton.value?.focus({ preventScroll: true })
+  if (restoreFocus) launchButton.value?.focus({ preventScroll: true })
 }
 function isEditable(target: EventTarget | null) {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
@@ -109,6 +110,7 @@ function tick(time: number) {
 function resize() { if (active.value) { x = Math.min(x, window.innerWidth - 52); measureStops() } }
 function visibility() { if (document.hidden) clearKeys() }
 onMounted(() => {
+  heroTarget.value = document.querySelector('[data-ride-launcher]')
   window.addEventListener('keydown', keydown)
   window.addEventListener('keyup', keyup)
   window.addEventListener('blur', clearKeys)
@@ -123,13 +125,16 @@ onUnmounted(() => {
   window.removeEventListener('resize', resize)
   document.removeEventListener('visibilitychange', visibility)
 })
+defineExpose({ stop })
 </script>
 
 <template>
-  <div class="ride-launcher">
-    <button v-if="!active" ref="launchButton" class="ride-launch button-sm" aria-label="Spustiť jazdu na motokrosovej motorke pomocou klávesov W A S D" @click="start"><RaceIcon name="helmet" /><span>Zajazdi si</span><span class="ride-key-hint caption-3">W A S D</span></button>
-    <div v-else class="ride-dashboard rounded-lg border border-white/20 bg-ink/95 p-4 text-white shadow-xl backdrop-blur-xl" aria-label="Ovládanie motorky">
-      <div class="flex items-center justify-between gap-6"><span class="caption-3 text-race">Voľná jazda</span><button class="ride-close caption-3 rounded-sm px-2 py-1 hover:bg-white/10" @click="stop">Koniec <span class="text-muted">Esc</span></button></div>
+  <Teleport v-if="heroTarget" :to="heroTarget">
+    <button ref="launchButton" type="button" class="ride-launch button-sm" :aria-label="active ? 'Ukončiť jazdu na motorke' : 'Spustiť jazdu na motokrosovej motorke pomocou klávesov W A S D'" :aria-pressed="active" @click="active ? stop() : start()"><RaceIcon name="helmet" /><span>{{ active ? 'Ukončiť jazdu' : 'Zajazdi si' }}</span><span class="ride-key-hint caption-3">W A S D</span></button>
+  </Teleport>
+  <div v-if="active" class="ride-controls">
+    <div class="ride-dashboard rounded-lg border border-white/20 bg-ink/95 p-4 text-white shadow-xl backdrop-blur-xl" aria-label="Ovládanie motorky">
+      <div class="flex items-center justify-between gap-6"><span class="caption-3 text-race">Voľná jazda</span><button class="ride-close caption-3 rounded-sm px-2 py-1 hover:bg-white/10" @click="stop()">Koniec <span class="text-muted">Esc</span></button></div>
       <p class="title-3 mt-2" role="status" aria-live="polite">{{ status }}</p>
       <p class="caption-5 mt-2 text-muted">W hore · S dole · A/D do strán</p>
       <div class="mt-3 flex items-end justify-between gap-6"><div class="ride-touch-controls" aria-label="Smer jazdy"><button v-for="control in [{ key: 'a', label: 'Doľava', text: 'A' }, { key: 'w', label: 'Hore', text: 'W' }, { key: 's', label: 'Dole', text: 'S' }, { key: 'd', label: 'Doprava', text: 'D' }]" :key="control.key" class="ride-key button-sm" :aria-label="control.label" @pointerdown="hold($event, control.key)" @pointerup="keys.delete(control.key)" @pointercancel="keys.delete(control.key)" @lostpointercapture="keys.delete(control.key)">{{ control.text }}</button></div><span class="caption-4 tabular-nums text-muted">{{ distance.toFixed(1) }} m*</span></div>
@@ -154,8 +159,8 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.ride-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 45; }
-.ride-launch { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid #ffffff40; border-radius: 999px; background: #181818; color: white; box-shadow: 0 4px 32px #0004; }
+.ride-controls { position: fixed; left: 24px; bottom: 24px; z-index: 45; }
+.ride-launch { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 48px; border: 1px solid #ffffff40; border-radius: 4px; background: #1f1f1f; color: white; }
 .ride-launch:hover { background: #f54b2b; transform: translateY(-4px); }.ride-launch:active { transform: scale(.98); }
 .ride-key-hint { color: #bbb; border: 1px solid #ffffff30; padding: 4px 8px; border-radius: 4px; }
 .ride-dashboard { width: 300px; }
@@ -166,7 +171,7 @@ onUnmounted(() => {
 .ride-bike__dust { position: absolute; inset: 0; opacity: 0; transform: scaleX(var(--facing, 1)); }.is-moving .ride-bike__dust { opacity: .7; }
 .ride-bike__dust i { position: absolute; bottom: 8px; left: 8px; width: 8px; height: 8px; background: #bca184; border-radius: 50%; animation: dust 600ms cubic-bezier(.22,1,.36,1) infinite; }.ride-bike__dust i:nth-child(2) { animation-delay: 200ms; }.ride-bike__dust i:nth-child(3) { animation-delay: 400ms; }
 @keyframes dust { from { transform: translate(0, 0) scale(.5); opacity: .8; } to { transform: translate(-32px, -16px) scale(1.5); opacity: 0; } }
-@media (max-width: 600px) { .ride-launcher { right: 16px; bottom: 16px; }.ride-dashboard { width: 280px; }.ride-key-hint { display: none; } }
+@media (max-width: 600px) { .ride-controls { left: 16px; bottom: 80px; }.ride-dashboard { width: 280px; }.ride-key-hint { display: none; } }
 @media (prefers-reduced-motion: reduce) { .ride-bike__dust { display: none; }.ride-launch:hover { transform: none; } }
 </style>
 

@@ -122,6 +122,7 @@ const raceDate = computed(() => {
         </aside>
       </div>
       <div class="hero__footer">
+        <div class="hero__ride-launch" data-ride-launcher></div>
         <a :href="primaryAction?.href ?? '#o-klube'" class="hero__explore caption-3"><span class="hero__scroll-icon" aria-hidden="true">↓</span> Objav viac <span class="hero__scroll-line" aria-hidden="true"></span></a>
         <a v-if="credit" class="hero__photo-credit caption-5" :href="credit.href" target="_blank" rel="noopener noreferrer" :aria-label="'Fotografia: ' + credit.author"><span>Foto: {{ credit.author }}</span><span v-if="credit.source">/ {{ credit.source }}</span><span aria-hidden="true">↗</span></a>
       </div>
@@ -153,7 +154,7 @@ const raceDate = computed(() => {
 .hero__button--secondary { padding-left: 0; color: #fff; background: transparent; }
 .hero__button--secondary:hover { color: #f54b2b; }
 .hero__button--secondary > span { @apply text-xl; }
-.hero__footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 0 32px; }
+.hero__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; padding: 0 0 32px; }
 .hero__explore { display: inline-flex; align-items: center; gap: 16px; text-transform: uppercase; letter-spacing: .08em; }
 .hero__scroll-icon { display: grid; width: 32px; height: 40px; place-items: center; border: 1px solid #ffffff40; border-radius: 999px; }
 .hero__scroll-line { width: 64px; height: 1px; background: #ffffff30; }

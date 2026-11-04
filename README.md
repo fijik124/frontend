@@ -1,9 +1,78 @@
-# frontend
+# OŠK AMK Veľký Klíž
+
+Motocross club website and local membership demo built with Vue 3, Tailwind CSS 4,
+Vue Router 4, and Pinia 4.
+
+## Pages
+
+- `/` — club homepage, photography gallery, and visitor information.
+- `/preteky` — next race, countdown, schedule, rider information, and location.
+- `/prihlasenie` — passwordless demo account selection or email login.
+- `/registracia` — registration using a license issued for a specific first and last name.
+- `/clenska-zona` — member overview.
+- `/clenska-zona/clenovia` — member search, editing, approvals, and CSV export.
+- `/clenska-zona/licencie` — license generation, assignment, and validity.
+- `/clenska-zona/roly` — custom roles and permissions.
+- `/clenska-zona/preteky` — next race settings.
+- `/clenska-zona/moj-profil` — personal member details and license.
+- `/clenska-zona/nastavenia` — demo information and reset.
+
+Vue Router handles navigation, direct links, route guards, browser history,
+scroll restoration, document titles, and the branded 404. Configure production
+hosting to serve `index.html` for application routes.
+
+## Local demo workflow
+
+1. Open `/prihlasenie` and select **Správca klubu**.
+2. Open **Licencie** and generate a license for a first name and last name.
+   Select its club role and either permanent validity or an expiry date.
+3. Open `/registracia`. Enter that name, license number, and a demo email.
+   Names must match, including diacritics; case and extra spacing are normalized.
+4. The license remains attached to the new member. The same license cannot
+   activate another account. Expired and revoked licenses are rejected.
+5. Approve the application in **Žiadosti**. Members can edit their phone and
+   start number afterward; assigned roles are controlled by authorized staff.
+
+Member type is part of the role system. Built-in roles include Správca, Člen,
+Jazdec, Dobrovoľník, and Podporovateľ. Custom roles can grant member viewing,
+member management, license management, race management, role assignment, and
+role management. Permissions control both the interface and store actions.
+
+Members created directly by an authorized administrator also receive a license
+automatically. Administrators can extend a license or make it permanent while
+keeping its number and member association. Expiry dates include the entire
+specified day in `Europe/Bratislava`.
+
+## Data and persistence
+
+Pinia owns member, license, role, session, and race state. Browser storage
+provides persistence for this local demo:
+
+- `amk-members-demo-v1` in localStorage contains the versioned membership data.
+  Older demo schemas migrate to the combined role model.
+- `amk-race-demo-v1` in localStorage contains next race settings.
+- `amk-member-session-v1` in sessionStorage remembers the demo account in a tab.
+
+This demo has no backend, password verification, or real identity checks.
+Use fictional data. Changes are local to the browser and synchronize between
+tabs; they are not shared with other visitors or devices. Race settings update
+the homepage and race page in the same browser. The default race date and
+photographs are illustrative.
+
+## Ride mode
+
+Select **Zajazdi si** in the homepage or race hero. Use W/A/S/D or the arrow keys to
+move the bike; the page follows its vertical movement. On-screen controls
+support touch. Escape exits. Controls pause while dialogs or the menu are open.
+The active ride controls appear at the lower left. A back-to-top arrow appears
+at the lower right on the homepage after scrolling past the hero. Returning to
+the top ends an active ride. The site uses native cursors.
 
 ## Motorsport hero
 
 `src/components/Hero.vue` supports `mode="main"` and `mode="next-race"`.
-`src/App.vue` demonstrates switching between them and contains the sample race data.
+The homepage and race page use these modes. Sample race data lives in
+`src/stores/race.ts` and can be edited through the local admin dashboard.
 The sample date is illustrative; replace it with the club's confirmed event.
 
 ```vue

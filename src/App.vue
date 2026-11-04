@@ -4,16 +4,19 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import SiteHeader from './components/SiteHeader.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import MotocrossRide from './components/MotocrossRide.vue'
+import BackToTop from './components/BackToTop.vue'
 import { useMembership } from './stores/membership'
 import { useRaceSettings } from './stores/race'
 
 const route = useRoute()
 const router = useRouter()
 const menuOpen = ref(false)
+const ride = ref<InstanceType<typeof MotocrossRide> | null>(null)
 const marketingPage = computed(() => route.meta.layout === 'site')
 const { currentMember, hasPermission } = useMembership()
 const { raceSettings } = useRaceSettings()
 watch([currentMember, () => route.fullPath], () => {
+  menuOpen.value = false
   if (route.meta.requiresSession && (!currentMember.value || currentMember.value.status === 'inactive')) void router.replace('/prihlasenie')
   else if ((route.meta.permissions as string[] | undefined)?.length && !(route.meta.permissions as string[]).some(permission => hasPermission(permission))) void router.replace('/clenska-zona')
 })
@@ -27,7 +30,8 @@ watchEffect(() => {
   <div :inert="menuOpen">
     <RouterView v-slot="{ Component, route: activeRoute }"><component :is="Component" :key="activeRoute.meta.layout === 'dashboard' ? 'dashboard' : activeRoute.name" /></RouterView>
     <SiteFooter v-if="marketingPage" />
-    <MotocrossRide v-if="marketingPage" :key="route.path" />
+    <MotocrossRide v-if="route.name === 'home' || route.name === 'race'" ref="ride" :key="route.path" />
+    <BackToTop v-if="route.name === 'home'" @go-top="ride?.stop(false)" />
   </div>
 </template>
 

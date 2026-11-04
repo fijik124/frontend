@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLink from './AppLink.vue'
 import RaceIcon from './RaceIcon.vue'
@@ -7,7 +7,6 @@ import { navigate } from '../composables/useAppRouter'
 import { useMembership } from '../stores/membership'
 const menuOpen = defineModel<boolean>('menuOpen', { default: false })
 const route = useRoute()
-const page = computed(() => route.name)
 const { currentMember } = useMembership()
 function setMode(mode: string) { void navigate(mode === 'main' ? '/' : '/preteky'); menuOpen.value = false }
 watch(() => route.fullPath, () => { menuOpen.value = false })
@@ -42,9 +41,9 @@ onUnmounted(() => { window.removeEventListener('keydown', menuKeydown); window.r
         <span class="caption-3 leading-4">OŠK AMK<br /><span class="text-muted">Veľký Klíž</span></span>
       </a>
       <nav class="site-nav hidden items-center gap-8 lg:flex" aria-label="Hlavná navigácia">
-        <AppLink class="nav-link" :aria-current="page === 'home' ? 'page' : undefined" href="/">Domov</AppLink>
+        <AppLink class="nav-link" href="/">Domov</AppLink>
         <AppLink class="nav-link" href="/#o-klube">Náš klub</AppLink>
-        <AppLink class="nav-link" :aria-current="page === 'race' ? 'page' : undefined" href="/preteky">Preteky <span class="inline-block h-1 w-1 bg-race"></span></AppLink>
+        <AppLink class="nav-link" href="/preteky">Preteky <span class="inline-block h-1 w-1 bg-race"></span></AppLink>
         <AppLink class="nav-link" href="/#galeria">Galéria</AppLink>
         <AppLink class="nav-link" :href="currentMember ? '/clenska-zona' : '/prihlasenie'">Členská zóna</AppLink>
       </nav>
