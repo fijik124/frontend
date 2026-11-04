@@ -1,45 +1,33 @@
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import blog from '@/components/blog.vue'
-import ComponentA from '@/components/componenta.vue'
-import ActualTabs from './components/ActualTabs.vue';
-import InstagramProfiles from './components/InstagramProfiles.vue';
+﻿<script setup lang="ts">
+import { computed, ref, watch, watchEffect } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import SiteHeader from './components/SiteHeader.vue'
+import SiteFooter from './components/SiteFooter.vue'
+import MotocrossRide from './components/MotocrossRide.vue'
+import { useMembership } from './stores/membership'
+import { useRaceSettings } from './stores/race'
 
-const data = ref([
-    { url: 'https://picsum.photos/200/200', width: '45', height: '45', title: 'Image 1' },
-    { url: 'https://picsum.photos/200/202', width: '45', height: '45', title: 'Image 2' },
-    { url: 'https://picsum.photos/200/201', width: '45', height: '45', title: 'Image 3' }
-])
-
-const datai = ref([
-    { url: 'https://picsum.photos/200/200', width: '66', height: '66', name: 'Profile 1' },
-    { url: 'https://picsum.photos/200/202', width: '66', height: '66', name: 'Profile 2' },
-    { url: 'https://picsum.photos/200/201', width: '66', height: '66', name: 'Profile 3' }
-])
-
-const inputa = ref(0)
-const message = ref('')
-
-watch(inputa, (newValue, oldValue) => {
-    if (newValue < 0) {
-        inputa.value = 0
-    }
-    if (newValue > 100) {
-        inputa.value = 100
-    }
-    message.value = `Hodnota byla změněna z ${oldValue} na ${newValue}`
+const route = useRoute()
+const router = useRouter()
+const menuOpen = ref(false)
+const marketingPage = computed(() => route.meta.layout === 'site')
+const { currentMember, hasPermission } = useMembership()
+const { raceSettings } = useRaceSettings()
+watch([currentMember, () => route.fullPath], () => {
+  if (route.meta.requiresSession && (!currentMember.value || currentMember.value.status === 'inactive')) void router.replace('/prihlasenie')
+  else if ((route.meta.permissions as string[] | undefined)?.length && !(route.meta.permissions as string[]).some(permission => hasPermission(permission))) void router.replace('/clenska-zona')
+})
+watchEffect(() => {
+  if (route.name === 'race') document.title = raceSettings.value.name + ' | OŠK AMK Veľký Klíž'
 })
 </script>
-
 <template>
-<input v-model="inputa" type="number" placeholder="Zadejte číslo" />
-<ComponentA :cifra="inputa" />
-<p>{{ message }}</p>
+  <a href="#main-content" class="skip-link button-sm">Preskočiť na obsah</a>
+  <SiteHeader v-if="marketingPage" v-model:menu-open="menuOpen" />
+  <div :inert="menuOpen">
+    <RouterView v-slot="{ Component, route: activeRoute }"><component :is="Component" :key="activeRoute.meta.layout === 'dashboard' ? 'dashboard' : activeRoute.name" /></RouterView>
+    <SiteFooter v-if="marketingPage" />
+    <MotocrossRide v-if="marketingPage" :key="route.path" />
+  </div>
 </template>
 
-
-
-
-<style scoped>
-
-</style>
