@@ -1,63 +1,25 @@
 # OŠK AMK Veľký Klíž
 
-Motocross club website and local membership demo built with Vue 3, Tailwind CSS 4,
-Vue Router 4, and Pinia 4.
+Vue 3, TypeScript, Tailwind CSS, Vue Router and Pinia frontend, connected to the club's Express/PostgreSQL/Better Auth backend.
 
-## Pages
+## Setup
 
-- `/` — club homepage, photography gallery, and visitor information.
-- `/preteky` — next race, countdown, schedule, rider information, and location.
-- `/prihlasenie` — passwordless demo account selection or email login.
-- `/registracia` — registration using a license issued for a specific first and last name.
-- `/clenska-zona` — member overview.
-- `/clenska-zona/clenovia` — member search, editing, approvals, and CSV export.
-- `/clenska-zona/licencie` — license generation, assignment, and validity.
-- `/clenska-zona/roly` — custom roles and permissions.
-- `/clenska-zona/preteky` — next race settings.
-- `/clenska-zona/moj-profil` — personal member details and license.
-- `/clenska-zona/nastavenia` — demo information and reset.
+Run npm ci and npm run dev. Vite proxies /api to http://localhost:3000. Start the backend, apply its migrations and run its mail worker using the backend repository's README. Set VITE_API_BASE_URL only when using another same-site API origin. Frontend environment variables are public and must never contain secrets. Run npm run build for TypeScript checks and the production build.
 
-Vue Router handles navigation, direct links, route guards, browser history,
-scroll restoration, document titles, and the branded 404. Configure production
-hosting to serve `index.html` for application routes.
+## Membership workflow
 
-## Local demo workflow
+- /prihlasenie uses email and password. The first administrator is created through the backend's controlled CLI and must verify their email.
+- /registracia requires an administrator-issued license and matching names, email and password. Verify the email, then wait for approval in /clenska-zona/ziadosti before staff permissions activate.
+- /obnova-hesla requests a password reset or completes one using the emailed token.
+- Existing member, license, role, profile and race management URLs remain available in /clenska-zona. Members edit only their own phone and start number. Authorized staff manage licensed names, roles, approvals and contribution status.
+- Administrators can invite members directly, issue licenses and extend their validity without changing the license number. Built-in roles and custom roles use one unified permission system.
+- /clenska-zona/nastavenia contains account information and exports. Demo login, public administrator switching and demo reset are removed.
 
-1. Open `/prihlasenie` and select **Správca klubu**.
-2. Open **Licencie** and generate a license for a first name and last name.
-   Select its club role and either permanent validity or an expiry date.
-3. Open `/registracia`. Enter that name, license number, and a demo email.
-   Names must match, including diacritics; case and extra spacing are normalized.
-4. The license remains attached to the new member. The same license cannot
-   activate another account. Expired and revoked licenses are rejected.
-5. Approve the application in **Žiadosti**. Members can edit their phone and
-   start number afterward; assigned roles are controlled by authorized staff.
+Pinia contains only in-memory UI state. Members, licenses, roles, race settings and sessions persist in PostgreSQL through the backend. Authentication uses HttpOnly cookie sessions; no credentials or session identifiers are stored in browser storage. Previous demo data is not imported as real identities. Server failures show errors and never activate demo authentication.
 
-Member type is part of the role system. Built-in roles include Správca, Člen,
-Jazdec, Dobrovoľník, and Podporovateľ. Custom roles can grant member viewing,
-member management, license management, race management, role assignment, and
-role management. Permissions control both the interface and store actions.
+Configure production hosting to serve index.html for Vue application routes and proxy /api to the backend. Prefer a single HTTPS origin. Production needs real PostgreSQL and SMTP settings, a random Better Auth secret and the initial administrator; see the backend setup and API documentation.
 
-Members created directly by an authorized administrator also receive a license
-automatically. Administrators can extend a license or make it permanent while
-keeping its number and member association. Expiry dates include the entire
-specified day in `Europe/Bratislava`.
-
-## Data and persistence
-
-Pinia owns member, license, role, session, and race state. Browser storage
-provides persistence for this local demo:
-
-- `amk-members-demo-v1` in localStorage contains the versioned membership data.
-  Older demo schemas migrate to the combined role model.
-- `amk-race-demo-v1` in localStorage contains next race settings.
-- `amk-member-session-v1` in sessionStorage remembers the demo account in a tab.
-
-This demo has no backend, password verification, or real identity checks.
-Use fictional data. Changes are local to the browser and synchronize between
-tabs; they are not shared with other visitors or devices. Race settings update
-the homepage and race page in the same browser. The default race date and
-photographs are illustrative.
+## Website components
 
 ## Ride mode
 
@@ -71,9 +33,7 @@ the top ends an active ride. The site uses native cursors.
 ## Motorsport hero
 
 `src/components/Hero.vue` supports `mode="main"` and `mode="next-race"`.
-The homepage and race page use these modes. Sample race data lives in
-`src/stores/race.ts` and can be edited through the local admin dashboard.
-The sample date is illustrative; replace it with the club's confirmed event.
+The homepage and race page use these modes. Race data comes from the public API and is managed through the authorized race settings page. No race is published until staff save it.
 
 ```vue
 <Hero

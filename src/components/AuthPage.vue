@@ -1,98 +1,50 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { useRoute } from "vue-router";
-import AppLink from "./AppLink.vue";
-import RaceIcon from "./RaceIcon.vue";
-import { navigate } from "../composables/useAppRouter";
-import {
-  useMembership,
-  type MemberInput,
-  type MemberRole,
-} from "../stores/membership";
-const props = defineProps<{ mode: "login" | "register" }>();
-const route = useRoute();
-function enterDashboard() {
-  const redirect = route.query.redirect;
-  void navigate(
-    typeof redirect === "string" && redirect.startsWith("/clenska-zona")
-      ? redirect
-      : "/clenska-zona",
-  );
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import AppLink from './AppLink.vue'
+import RaceIcon from './RaceIcon.vue'
+import { navigate } from '../composables/useAppRouter'
+import { useMembership } from '../stores/membership'
+import { api, json } from '../api'
+const props = defineProps<{ mode: 'login' | 'register' }>()
+const route = useRoute()
+const { login, register, verifyLicense, storageError } = useMembership()
+const email = ref(''), password = ref(''), firstName = ref(''), lastName = ref(''), licenseNumber = ref('')
+const form = ref({ email: '' }), error = ref(''), success = ref(''), busy = ref(false), checking = ref(false)
+const licenseVerified = ref(false), licenseError = ref('')
+watch(() => props.mode, () => { error.value = ''; success.value = ''; password.value = '' })
+watch([firstName, lastName, licenseNumber], () => { licenseVerified.value = false; licenseError.value = '' })
+async function checkLicense() {
+  if (checking.value) return
+  checking.value = true; licenseError.value = ''; licenseVerified.value = false
+  const values = [firstName.value, lastName.value, licenseNumber.value]
+  try { await verifyLicense(licenseNumber.value, firstName.value, lastName.value); licenseVerified.value = values.every((v, i) => v === [firstName.value, lastName.value, licenseNumber.value][i]) }
+  catch (cause) { licenseError.value = cause instanceof Error ? cause.message : 'Licenciu sa nepodarilo overiť.' }
+  finally { checking.value = false }
 }
-const { login, loginDemo, createMember, verifyLicense, storageError } =
-  useMembership();
-const email = ref("");
-const error = ref("");
-const consent = ref(false);
-const firstName = ref("");
-const lastName = ref("");
-const licenseNumber = ref("");
-const licenseVerified = ref(false);
-const licenseError = ref("");
-const form = ref<MemberInput>({
-  firstName: "",
-  lastName: "",
-  name: "",
-  email: "",
-  phone: "",
-  status: "pending",
-  role: "member",
-  feePaid: false,
-  number: "",
-});
-watch(
-  () => props.mode,
-  () => {
-    error.value = "";
-    consent.value = false;
-  },
-);
-watch([firstName, lastName, licenseNumber], () => {
-  licenseVerified.value = false;
-  licenseError.value = "";
-});
-function checkLicense() {
-  licenseError.value = "";
-  licenseVerified.value = false;
+async function submit() {
+  if (busy.value) return
+  busy.value = true; error.value = ''; success.value = ''
   try {
-    verifyLicense(licenseNumber.value, firstName.value, lastName.value);
-    licenseVerified.value = true;
-  } catch (cause) {
-    licenseError.value =
-      cause instanceof Error ? cause.message : "Licenciu sa nepodarilo overiť.";
-  }
+    if (props.mode === 'register') {
+      const result = await register({ firstName: firstName.value, lastName: lastName.value, email: form.value.email, password: password.value, code: licenseNumber.value })
+      success.value = result.message; password.value = ''
+    } else {
+      await login(email.value, password.value); password.value = ''
+      const redirect = route.query.redirect
+      await navigate(typeof redirect === 'string' && /^\/clenska-zona(?:\/|$)/.test(redirect) ? redirect : '/clenska-zona')
+    }
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Požiadavku sa nepodarilo spracovať.' }
+  finally { busy.value = false }
 }
-function submit() {
-  error.value = "";
-  try {
-    if (props.mode === "register") {
-      if (!consent.value)
-        throw new Error("Potvrď, že rozumieš fungovaniu lokálnej ukážky.");
-      createMember(form.value, {
-        code: licenseNumber.value,
-        firstName: firstName.value,
-        lastName: lastName.value,
-      });
-    } else login(email.value);
-    enterDashboard();
-  } catch (cause) {
-    error.value =
-      cause instanceof Error
-        ? cause.message
-        : "Akcia sa nepodarila. Skús to znova.";
-  }
-}
-function enterDemo(role: MemberRole) {
-  try {
-    loginDemo(role);
-    enterDashboard();
-  } catch (cause) {
-    error.value =
-      cause instanceof Error ? cause.message : "Demo účet nie je dostupný.";
-  }
+async function resendVerification() {
+  if (busy.value || !email.value) return
+  busy.value = true; error.value = ''; success.value = ''
+  try { await api('/auth/send-verification-email', json('POST', { email: email.value, callbackURL: location.origin + '/prihlasenie?verified=1' })); success.value = 'Ak účet potrebuje overenie, odoslali sme email s odkazom.' }
+  catch (cause) { error.value = cause instanceof Error ? cause.message : 'Email sa nepodarilo odoslať.' }
+  finally { busy.value = false }
 }
 </script>
-
 <template>
   <main
     id="main-content"
@@ -145,19 +97,12 @@ function enterDemo(role: MemberRole) {
               : "Registráciu dokončíš iba s licenciou vydanou správcom pre tvoje meno a priezvisko."
           }}
         </p>
-        <div class="demo-notice mt-6">
-          <span class="caption-3 block"
-            >Lokálna ukážka bez skutočného prihlasovania</span
-          >
-          <p class="caption-5 mt-2">
-            Heslá sa nepoužívajú. Údaje zostávajú v tomto prehliadači. Zadaj iba
-            ukážkové údaje.
-          </p>
-        </div>
+<p v-if="route.query.verified" class="demo-notice mt-6" role="status">Email je overený. Môžete sa prihlásiť.</p>
         <p v-if="storageError" class="form-error mt-4" role="alert">
           {{ storageError }}
         </p>
-        <form class="mt-8" @submit.prevent="submit">
+<form class="mt-8" @submit.prevent="submit" :aria-busy="busy">
+          <fieldset :disabled="busy || !!success && mode === 'register'">
           <template v-if="mode === 'register'">
             <div class="grid gap-4 sm:grid-cols-2">
               <label class="form-label" for="register-first-name"
@@ -202,7 +147,7 @@ function enterDemo(role: MemberRole) {
               <button
                 type="button"
                 class="button-sm mt-4 inline-flex items-center gap-3 text-race hover:underline"
-                @click="checkLicense"
+                :disabled="checking || busy" @click="checkLicense"
               >
                 Overiť licenciu <RaceIcon name="check" />
               </button>
@@ -242,56 +187,27 @@ function enterDemo(role: MemberRole) {
               type="email"
               autocomplete="email"
               required
-              placeholder="jazdec@amk-demo.example"
+              placeholder="tvoj@email.sk"
           /></label>
-          <label
-            v-if="mode === 'register'"
-            class="body-6 mt-6 flex items-start gap-3 text-ink/65"
-            ><input
-              v-model="consent"
-              type="checkbox"
-              required
-              class="mt-1 h-4 w-4 shrink-0 accent-race"
-            /><span
-              >Rozumiem, že ide o demo. Údaje sa ukladajú iba do tohto
-              prehliadača a nejde o skutočnú prihlášku do klubu.</span
-            ></label
-          >
+
+<label class="form-label mt-6" for="auth-password">Heslo<input id="auth-password" v-model="password" class="form-input" type="password" :autocomplete="mode === 'register' ? 'new-password' : 'current-password'" :minlength="mode === 'register' ? 12 : undefined" maxlength="128" required /></label>
+          <p v-if="mode === 'register'" class="caption-5 mt-3 text-ink/60">Použite aspoň 12 znakov.</p>
           <p v-if="error" class="form-error mt-4" role="alert">{{ error }}</p>
           <button
             class="button-md mt-6 flex w-full items-center justify-between gap-4 rounded-sm bg-race px-3 py-3 text-white hover:bg-race-hover active:scale-[.98]"
             type="submit"
           >
             {{
-              mode === "login"
-                ? "Prihlásiť sa do dema"
-                : "Odoslať demo žiadosť"
+              busy ? "Spracúvame…" : mode === "login"
+                ? "Prihlásiť sa"
+                : "Odoslať žiadosť"
             }}<RaceIcon />
           </button>
+          </fieldset>
         </form>
-        <template v-if="mode === 'login'"
-          ><div class="my-6 flex items-center gap-4">
-            <span class="h-px flex-1 bg-ink/15"></span
-            ><span class="caption-4 text-ink/50"
-              >alebo vyskúšaj ukážkový účet</span
-            ><span class="h-px flex-1 bg-ink/15"></span>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <button class="demo-account" @click="enterDemo('admin')">
-              <span class="title-3"
-                >Správca klubu <span aria-hidden="true">↗</span></span
-              ><span class="caption-5 mt-1 text-ink/60"
-                >Správa členov a žiadostí</span
-              ></button
-            ><button class="demo-account" @click="enterDemo('member')">
-              <span class="title-3"
-                >Člen klubu <span aria-hidden="true">↗</span></span
-              ><span class="caption-5 mt-1 text-ink/60"
-                >Vlastný členský profil</span
-              >
-            </button>
-          </div></template
-        >
+        <p v-if="success" class="demo-notice mt-6" role="status">{{ success }}</p>
+        <div v-if="mode === 'login'" class="body-6 mt-6 flex flex-wrap gap-4"><AppLink href="/obnova-hesla" class="text-race hover:underline">Zabudnuté heslo</AppLink><button type="button" class="text-race hover:underline" :disabled="busy || !email" @click="resendVerification">Odoslať overovací email</button></div>
+
         <p class="body-6 mt-8 text-center text-ink/60">
           <template v-if="mode === 'login'"
             >Máš licenciu od správcu?
@@ -301,7 +217,7 @@ function enterDemo(role: MemberRole) {
               >Dokončiť registráciu</AppLink
             ></template
           ><template v-else
-            >Už máš demo účet?
+            >Už máš účet?
             <AppLink
               href="/prihlasenie"
               class="font-semibold text-race hover:underline"
@@ -311,7 +227,7 @@ function enterDemo(role: MemberRole) {
         </p>
       </div>
       <p class="caption-5 mt-10 text-ink/50">
-        OŠK AMK Veľký Klíž · Členské demo · Bez odosielania údajov na server
+        OŠK AMK Veľký Klíž · Členská zóna
       </p>
     </div>
   </main>

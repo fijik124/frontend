@@ -4,9 +4,9 @@ import Hero from './Hero.vue'
 import RaceIcon from './RaceIcon.vue'
 import AppLink from './AppLink.vue'
 import { useRaceSettings } from '../stores/race'
-const { raceSettings, nextRace: race, fullRaceDate, raceMapUrl } = useRaceSettings()
+const { raceSettings, nextRace: race, fullRaceDate, raceMapUrl, raceExists, raceLoading } = useRaceSettings()
 const schedule = computed(() => raceSettings.value.schedule)
-const heroTitle = computed(() => raceSettings.value.name.startsWith('Motokros ') ? ['Motokros', raceSettings.value.name.slice(9) + '.'] : [raceSettings.value.name])
+const heroTitle = computed(() => raceSettings.value.name.startsWith('Motokros ') ? ['Motokros', raceSettings.value.name.slice(9) + '.'] : [raceSettings.value.name || 'Najbližšie preteky pripravujeme'])
 const riderInfo = computed(() => [
   { label: 'Registrácia', detail: raceSettings.value.registrationOpen ? 'Registrácia je otvorená. Použi registračný odkaz nižšie a riaď sa pokynmi organizátora.' : 'Prihlasovanie zatiaľ nie je otvorené. Odkaz a termín registrácie zverejníme po potvrdení podujatia.' },
   { label: 'Kategórie a licencia', detail: raceSettings.value.categories || 'Zoznam kategórií, vekové limity a požiadavky na licenciu doplníme do oficiálnych propozícií.' },
@@ -18,6 +18,7 @@ const riderInfo = computed(() => [
 <template>
   <main id="main-content">
     <div class="page-width flex flex-wrap items-center justify-between gap-4 py-6"><AppLink href="/" class="button-sm flex items-center gap-3 text-muted hover:text-white"><RaceIcon class="rotate-180" /> Späť na domov</AppLink><span class="caption-3 rounded-sm bg-race/10 px-3 py-2 text-[#fca692]">{{ raceSettings.confirmed ? 'Potvrdené podujatie' : 'Návrh podujatia · termín nie je potvrdený' }}</span></div>
+    <p v-if="!raceExists && !raceLoading" class="page-width py-6" role="status">Najbližšie preteky pripravujeme. Podrobnosti zverejníme po ich potvrdení.</p>
     <Hero mode="next-race" :race="race" :title="heroTitle" :description="raceSettings.description" :race-confirmed="raceSettings.confirmed" accent-title="Buď pri tom." :primary-action="{ label: 'Informácie pre jazdcov', href: '#jazdci' }" :secondary-action="{ label: 'Program dňa', href: '#program' }" />
     <nav class="race-subnav bg-paper text-ink" aria-label="Informácie o pretekoch"><div class="page-width flex flex-wrap items-center gap-6 py-6"><span class="eyebrow mr-auto">Tvoj pretekový víkend</span><a href="#program" class="button-sm hover:text-race">Program</a><a href="#jazdci" class="button-sm hover:text-race">Pre jazdcov</a><a href="#divaci" class="button-sm hover:text-race">Pre divákov</a><a href="#miesto" class="button-sm hover:text-race">Miesto a kontakt</a></div></nav>
     <section class="page-width py-16 lg:py-24" aria-labelledby="race-overview">
