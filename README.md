@@ -6,6 +6,34 @@ Vue 3, TypeScript, Tailwind CSS, Vue Router and Pinia frontend, connected to the
 
 Run npm ci and npm run dev. Vite proxies /api to http://localhost:3000. Start the backend, apply its migrations and run its mail worker using the backend repository's README. Set VITE_API_BASE_URL only when using another same-site API origin. Frontend environment variables are public and must never contain secrets. Run npm run build for TypeScript checks and the production build.
 
+## Docker
+
+Build and run the production frontend:
+
+```sh
+docker build -t amk-frontend .
+docker run --rm -p 8080:80 amk-frontend
+```
+
+Open http://localhost:8080. Nginx serves the built app and supports direct links
+to Vue routes. API calls are proxied to `http://backend:3000` by default. Put
+both containers on the same user-defined Docker network with the backend named
+`backend`, or set `BACKEND_URL` to a backend origin reachable from the container
+(without a trailing slash):
+
+```sh
+docker run --rm -p 8080:80 -e BACKEND_URL=http://host.docker.internal:3000 amk-frontend
+```
+
+The example above reaches a backend running on the host with Docker Desktop.
+The backend must allow the frontend's public origin in its authentication/CORS
+configuration. Use HTTPS through your reverse proxy for production.
+
+To use a different public API origin, pass
+`--build-arg VITE_API_BASE_URL=https://api.example.com` to `docker build`.
+Vite embeds this value during the build; changing it requires rebuilding the
+image. Local `.env` files are excluded from the build context.
+
 ## Membership workflow
 
 - /prihlasenie uses email and password. The first administrator is created through the backend's controlled CLI and must verify their email.
