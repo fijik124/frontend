@@ -12,46 +12,32 @@ Build and run the production frontend:
 
 ```sh
 docker build -t amk-frontend .
-docker run --rm -p 8080:80 amk-frontend
+docker run --rm -p 8080:80 -e VITE_API_BASE_URL=http://host.docker.internal:3000 amk-frontend
 ```
 
-Open http://localhost:8080. Nginx serves the built app and supports direct links
-to Vue routes. API calls are proxied to `http://backend:3000` by default. Put
-both containers on the same user-defined Docker network with the backend named
-`backend`, or set `BACKEND_URL` to a backend origin reachable from the container
-(without a trailing slash):
-
-```sh
-docker run --rm -p 8080:80 -e BACKEND_URL=http://host.docker.internal:3000 amk-frontend
-```
-
-The example above reaches a backend running on the host with Docker Desktop.
-The backend must allow the frontend's public origin in its authentication/CORS
-configuration. Use HTTPS through your reverse proxy for production.
-
-To use a different public API origin, pass
-`--build-arg VITE_API_BASE_URL=https://api.example.com` to `docker build`.
-Vite embeds this value during the build; changing it requires rebuilding the
-image. Local `.env` files are excluded from the build context.
+Open http://localhost:8080. Nginx serves the built app, supports direct links to
+Vue routes, and forwards `/api` requests to `VITE_API_BASE_URL`. Set this required
+runtime environment variable to the backend origin, without `/api` or a trailing
+slash. The example above reaches a backend on the host with Docker Desktop;
+use `http://backend:3000` for a backend named `backend` on the same Docker network.
+The backend must allow the frontend's public origin for authentication.
 
 ### Dokploy
 
 When using the Dockerfile build type, open the frontend application's
-**Environment** tab and add the following under **Build Time Arguments**:
+**Environment** tab and add the following under the normal runtime environment
+variables:
 
 ```dotenv
 VITE_API_BASE_URL=https://your-backend-domain.example
 ```
 
-Use the full backend origin, including `https://`, without `/api`; the frontend
-adds `/api` itself. Save and rebuild/redeploy the application. Setting this
-variable only in runtime environment variables or restarting the existing
-container does not change the compiled frontend.
-
-Alternatively, leave `VITE_API_BASE_URL` empty and set `BACKEND_URL` in the
-runtime environment variables to the backend origin reachable from the frontend
-container (for example, `http://backend:3000`). In this mode, browser requests to
-the frontend's own `/api` are expected: Nginx forwards them to `BACKEND_URL`.
+Save and redeploy. Include `https://` (or `http://` for an internal backend),
+without `/api` or a trailing slash. Nginx reads this value from the container
+environment at startup; no build argument or hardcoded Dockerfile URL is needed.
+Browser requests use the frontend's own `/api` URL, and Nginx forwards the full
+request path to the configured backend. Deploy this code once; subsequent URL
+changes only require recreating the container with the updated environment.
 
 ## Membership workflow
 
