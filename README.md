@@ -12,15 +12,15 @@ Build and run the production frontend:
 
 ```sh
 docker build -t amk-frontend .
-docker run --rm -p 8080:80 -e VITE_API_BASE_URL=http://host.docker.internal:3000 amk-frontend
+docker run --rm -p 8080:80 -e VITE_API_BASE_URL=http://localhost:3000 amk-frontend
 ```
 
-Open http://localhost:8080. Nginx serves the built app, supports direct links to
-Vue routes, and forwards `/api` requests to `VITE_API_BASE_URL`. Set this required
-runtime environment variable to the backend origin, without `/api` or a trailing
-slash. The example above reaches a backend on the host with Docker Desktop;
-use `http://backend:3000` for a backend named `backend` on the same Docker network.
-The backend must allow the frontend's public origin for authentication.
+Open http://localhost:8080. Nginx serves the built app and supports direct links
+to Vue routes. The browser calls the backend directly at `VITE_API_BASE_URL`.
+Set this required runtime environment variable to the backend's public origin,
+including `https://` and without `/api`. The URL must be reachable from the
+browser. The backend must allow the frontend's public origin for credentialed
+CORS and authentication.
 
 ### Dokploy
 
@@ -32,12 +32,14 @@ variables:
 VITE_API_BASE_URL=https://your-backend-domain.example
 ```
 
-Save and redeploy. Include `https://` (or `http://` for an internal backend),
-without `/api` or a trailing slash. Nginx reads this value from the container
-environment at startup; no build argument or hardcoded Dockerfile URL is needed.
-Browser requests use the frontend's own `/api` URL, and Nginx forwards the full
-request path to the configured backend. Deploy this code once; subsequent URL
-changes only require recreating the container with the updated environment.
+Save and redeploy. Nginx reads this value from the container environment at
+startup and serves it in `/runtime-config.js`, loaded before the app. No build
+argument or hardcoded Dockerfile URL is needed. Browser requests go directly to
+`https://your-backend-domain.example/api/...`. Deploy this code once; subsequent
+URL changes only require recreating the container with the updated environment.
+Open `/runtime-config.js` on the frontend domain to check the deployed value.
+An empty or relative production API URL is rejected instead of silently using
+the frontend's origin.
 
 ## Membership workflow
 
@@ -50,7 +52,7 @@ changes only require recreating the container with the updated environment.
 
 Pinia contains only in-memory UI state. Members, licenses, roles, race settings and sessions persist in PostgreSQL through the backend. Authentication uses HttpOnly cookie sessions; no credentials or session identifiers are stored in browser storage. Previous demo data is not imported as real identities. Server failures show errors and never activate demo authentication.
 
-Configure production hosting to serve index.html for Vue application routes and proxy /api to the backend. Prefer a single HTTPS origin. Production needs real PostgreSQL and SMTP settings, a random Better Auth secret and the initial administrator; see the backend setup and API documentation.
+Configure production hosting to serve index.html for Vue application routes and set VITE_API_BASE_URL to the backend's public HTTPS origin. Production needs real PostgreSQL and SMTP settings, a random Better Auth secret and the initial administrator; see the backend setup and API documentation.
 
 ## Website components
 

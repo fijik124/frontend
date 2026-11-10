@@ -1,7 +1,10 @@
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public fields?: Record<string, string[]>) { super(message) }
 }
-const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+const base = (window.__API_BASE_URL__ ?? import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
+if ((import.meta.env.PROD && !base) || (base && !/^https?:\/\//i.test(base))) {
+  throw new Error('Set VITE_API_BASE_URL to the full backend origin, including https://.')
+}
 export async function apiResponse(path: string, options: RequestInit = {}) {
   let response: Response
   try {
