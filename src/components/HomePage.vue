@@ -27,29 +27,28 @@ const photos = [
     alt: "Motokrosový jazdec vo vzduchu nad hlinenou traťou",
   },
 ];
+
 const questions = computed(() => [
   {
     question: "Kedy sa konajú najbližšie preteky?",
     answer: raceSettings.value.confirmed
-      ? "Potvrdený termín je " +
-        fullRaceDate.value +
-        ". Aktuálny program a pokyny nájdeš na stránke Preteky."
-      : "Oficiálny termín ešte nie je potvrdený. Zobrazený dátum je ilustračný. Potvrdený termín a program zverejníme na stránke Preteky.",
+      ? `Najbližšie preteky sa konajú ${fullRaceDate.value}. Aktuálny program, kategórie a pokyny nájdeš na stránke Preteky.`
+      : "Termín najbližších pretekov zatiaľ nie je oficiálne potvrdený. Aktuálne informácie zverejníme na stránke Preteky.",
   },
   {
-    question: "Kde nájdem Veľký Klíž?",
+    question: "Kde sa nachádza motokrosová trať Brody?",
     answer:
-      "Obec Veľký Klíž sa nachádza v okrese Partizánske. Odkaz na mapu nájdeš nižšie. Presný vstup do areálu a možnosti parkovania doplníme k potvrdenému podujatiu.",
+      "Motokrosová trať Brody sa nachádza pri obci Ješkova Ves v okrese Partizánske. Presnú polohu a navigáciu nájdeš na mape na našej stránke.",
   },
   {
-    question: "Čo potrebujem vedieť ako jazdec?",
+    question: "Môžem prísť na trať aj trénovať?",
     answer:
-      "Podmienky účasti, registráciu, kategórie a technické požiadavky zverejníme spolu s oficiálnymi propozíciami pretekov. Pred cestou si vždy over aktuálne pokyny organizátora.",
+      "Trať slúži aj na tréningy mimo pretekov. Možnosť tréningu závisí od aktuálneho stavu trate, počasia a plánovaných podujatí. Pred návštevou odporúčame overiť si dostupnosť u organizátora.",
   },
   {
-    question: "Môžem prísť aj ako divák?",
+    question: "Koľko stojí tréning na trati?",
     answer:
-      "Informácie o vstupnom, otváracích hodinách a zázemí pre divákov doplníme po potvrdení podujatia.",
+      "Tréningový poplatok závisí od aktuálnych podmienok a prípravy trate. Platnú cenu si pred návštevou over u organizátora OŠK AMK Veľký Klíž.",
   },
 ]);
 
@@ -307,10 +306,6 @@ onUnmounted(() => observer?.disconnect());
             </div>
           </button>
         </div>
-        <p class="caption-5 mt-6 text-ink/60">
-          Ilustračné fotografie motokrosu · Max Leveridge a John Bearby Images /
-          Unsplash
-        </p>
       </div>
     </section>
     <section
@@ -358,11 +353,11 @@ onUnmounted(() => observer?.disconnect());
         </div>
         <div class="max-w-sm">
           <p class="body-3">
-            Príď zažiť motokros do Veľkého Klíža.<br />My už sa nevieme dočkať.
+            Príď zažiť motokros k nám.<br />My už sa nevieme dočkať.
           </p>
           <a
             class="button-md mt-6 inline-flex items-center gap-8 rounded-sm bg-white px-3 py-2 text-ink hover:bg-paper active:scale-[.98]"
-            href="https://www.google.com/maps/search/?api=1&amp;query=Ve%C4%BEk%C3%BD+Kl%C3%AD%C5%BE+Slovensko"
+            href="https://www.google.com/maps/place/Motokrosov%C3%A1+tra%C5%A5+-+Je%C5%A1kova+Ves/@48.5369444,18.3399251,17z/data=!3m1!4b1!4m6!3m5!1s0x476b330044bd4da7:0x78e84522aef7e2cd!8m2!3d48.5369444!4d18.3425!16s%2Fg%2F11xcqg2m7c?entry=ttu&g_ep=EgoyMDI2MTEwNC4wIKXMDSoASAFQAw%3D%3D"
             target="_blank"
             rel="noopener noreferrer"
             >Nájdi obec na mape <RaceIcon name="external"

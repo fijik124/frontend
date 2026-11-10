@@ -1,14 +1,16 @@
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public fields?: Record<string, string[]>) { super(message) }
 }
-const base = (window.__API_BASE_URL__ ?? import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
+const base = import.meta.env.DEV ? '' : (window.__API_BASE_URL__ ?? import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
 if ((import.meta.env.PROD && !base) || (base && !/^https?:\/\//i.test(base))) {
   throw new Error('Set VITE_API_BASE_URL to the full backend origin, including https://.')
 }
 export async function apiResponse(path: string, options: RequestInit = {}) {
   let response: Response
   try {
-    response = await fetch(`${base}/api${path}`, { ...options, credentials: 'include',
+    response = import.meta.env.DEV
+      ? await (await import('./data/localApi')).localApiResponse(path, options)
+      : await fetch(`${base}/api${path}`, { ...options, credentials: 'include',
       signal: options.signal ?? AbortSignal.timeout(15000),
       headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } })
   } catch { throw new ApiError(0, 'NETWORK_ERROR', 'Server nie je dostupný. Skontrolujte pripojenie a skúste to znova.') }

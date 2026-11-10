@@ -11,7 +11,7 @@ const riderInfo = computed(() => [
   { label: 'Registrácia', detail: raceSettings.value.registrationOpen ? 'Registrácia je otvorená. Použi registračný odkaz nižšie a riaď sa pokynmi organizátora.' : 'Prihlasovanie zatiaľ nie je otvorené. Odkaz a termín registrácie zverejníme po potvrdení podujatia.' },
   { label: 'Kategórie a licencia', detail: raceSettings.value.categories || 'Zoznam kategórií, vekové limity a požiadavky na licenciu doplníme do oficiálnych propozícií.' },
   { label: 'Štartovné a doklady', detail: raceSettings.value.riderFee || 'Výšku štartovného a podmienky úhrady doplníme. Platbu neposielaj bez potvrdených pokynov organizátora.' },
-  { label: 'Technické požiadavky', detail: raceSettings.value.requirements || 'Motocykel a ochranná výstroj musia spĺňať predpisy podujatia. Presný postup technickej kontroly doplníme.' },
+  { label: 'Technické požiadavky', detail: raceSettings.value.requirements || 'Motocykel a ochranná výstroj musia spĺňať predpisy pre kategóriu motocross schválené na prislušný rok ktoré su uvedené v oficiálnych propozíciách na stránke SMF.' },
 ])
 </script>
 

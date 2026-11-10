@@ -4,7 +4,13 @@ Vue 3, TypeScript, Tailwind CSS, Vue Router and Pinia frontend, connected to the
 
 ## Setup
 
-Run npm ci and npm run dev. Vite proxies /api to http://localhost:3000. Start the backend, apply its migrations and run its mail worker using the backend repository's README. Set VITE_API_BASE_URL only when using another same-site API origin. Frontend environment variables are public and must never contain secrets. Run npm run build for TypeScript checks and the production build.
+Run `npm ci` and `npm run dev`. Development uses only fictional browser-local data; no backend, database or mail worker is needed. API URLs in environment variables and runtime configuration are ignored in development. Local requests never fall back to the backend.
+
+Sign in with `admin@example.test` (administrator), `member@example.test` (member), or `pending@example.test` (pending member). All three use the password `local-demo-2026`. New members added by the local administrator use the same demo password; registered members use their chosen password. Race settings, members, licenses, roles and activity are saved in this browser's `localStorage` under `amk:local-data:v1`. The signed-in member is kept in this tab's `sessionStorage` under `amk:local-session:v1`. Refreshing preserves edits. To reset the sample data, remove both keys in browser developer tools and reload.
+
+Local registration does not require email verification. Local password reset links are printed to the browser console instead of sending email. Use fictional details and demo passwords with the local data.
+
+`npm run build` runs TypeScript checks and creates the production build, which continues to use the real backend and requires `VITE_API_BASE_URL`. The local data adapter and demo credentials are excluded from production. Frontend environment variables are public and must never contain secrets.
 
 ## Docker
 
@@ -50,7 +56,7 @@ the frontend's origin.
 - Administrators can invite members directly, issue licenses and extend their validity without changing the license number. Built-in roles and custom roles use one unified permission system.
 - /clenska-zona/nastavenia contains account information and exports. Demo login, public administrator switching and demo reset are removed.
 
-Pinia contains only in-memory UI state. Members, licenses, roles, race settings and sessions persist in PostgreSQL through the backend. Authentication uses HttpOnly cookie sessions; no credentials or session identifiers are stored in browser storage. Previous demo data is not imported as real identities. Server failures show errors and never activate demo authentication.
+In production, Pinia contains only in-memory UI state. Members, licenses, roles, race settings and sessions persist in PostgreSQL through the backend. Authentication uses HttpOnly cookie sessions; no credentials or session identifiers are stored in browser storage. Development sample data is not imported as real identities. Production server failures show errors and never activate demo authentication.
 
 Configure production hosting to serve index.html for Vue application routes and set VITE_API_BASE_URL to the backend's public HTTPS origin. Production needs real PostgreSQL and SMTP settings, a random Better Auth secret and the initial administrator; see the backend setup and API documentation.
 
