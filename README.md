@@ -34,6 +34,25 @@ To use a different public API origin, pass
 Vite embeds this value during the build; changing it requires rebuilding the
 image. Local `.env` files are excluded from the build context.
 
+### Dokploy
+
+When using the Dockerfile build type, open the frontend application's
+**Environment** tab and add the following under **Build Time Arguments**:
+
+```dotenv
+VITE_API_BASE_URL=https://your-backend-domain.example
+```
+
+Use the full backend origin, including `https://`, without `/api`; the frontend
+adds `/api` itself. Save and rebuild/redeploy the application. Setting this
+variable only in runtime environment variables or restarting the existing
+container does not change the compiled frontend.
+
+Alternatively, leave `VITE_API_BASE_URL` empty and set `BACKEND_URL` in the
+runtime environment variables to the backend origin reachable from the frontend
+container (for example, `http://backend:3000`). In this mode, browser requests to
+the frontend's own `/api` are expected: Nginx forwards them to `BACKEND_URL`.
+
 ## Membership workflow
 
 - /prihlasenie uses email and password. The first administrator is created through the backend's controlled CLI and must verify their email.
