@@ -7,12 +7,13 @@ import { navigate } from '../composables/useAppRouter'
 import { useMembership } from '../stores/membership'
 import { api, json } from '../api'
 const props = defineProps<{ mode: 'login' | 'register' }>()
+const termsAccepted = ref(false)
 const route = useRoute()
 const { login, register, verifyLicense, storageError } = useMembership()
 const email = ref(''), password = ref(''), firstName = ref(''), lastName = ref(''), licenseNumber = ref('')
 const form = ref({ email: '' }), error = ref(''), success = ref(''), busy = ref(false), checking = ref(false)
 const licenseVerified = ref(false), licenseError = ref('')
-watch(() => props.mode, () => { error.value = ''; success.value = ''; password.value = '' })
+watch(() => props.mode, () => { error.value = ''; success.value = ''; password.value = ''; termsAccepted.value = false })
 watch([firstName, lastName, licenseNumber], () => { licenseVerified.value = false; licenseError.value = '' })
 async function checkLicense() {
   if (checking.value) return
@@ -27,6 +28,7 @@ async function submit() {
   busy.value = true; error.value = ''; success.value = ''
   try {
     if (props.mode === 'register') {
+      if (!termsAccepted.value) throw new Error('Pred registráciou prijmite pravidlá používania členskej zóny.')
       const result = await register({ firstName: firstName.value, lastName: lastName.value, email: form.value.email, password: password.value, code: licenseNumber.value })
       success.value = result.message; password.value = ''
     } else {
@@ -192,6 +194,8 @@ async function resendVerification() {
 
 <label class="form-label mt-6" for="auth-password">Heslo<input id="auth-password" v-model="password" class="form-input" type="password" :autocomplete="mode === 'register' ? 'new-password' : 'current-password'" :minlength="mode === 'register' ? 12 : undefined" maxlength="128" required /></label>
           <p v-if="mode === 'register'" class="caption-5 mt-3 text-ink/60">Použite aspoň 12 znakov.</p>
+          <p class="body-6 mt-6 text-ink/70">Údaje používame na prevádzku členskej zóny. Podrobnosti a vaše práva nájdete v <AppLink href="/ochrana-osobnych-udajov" class="text-race underline underline-offset-4">ochrane osobných údajov</AppLink>. Marketingové emaily neposielame.</p>
+          <label v-if="mode === 'register'" class="body-6 mt-4 flex items-start gap-3 text-ink"><input v-model="termsAccepted" name="terms-accepted" type="checkbox" required class="mt-1 h-4 w-4 shrink-0 accent-race" /><span>Prijímam <AppLink href="/pravidla-pouzivania" target="_blank" class="text-race underline underline-offset-4">pravidlá používania členskej zóny<span class="sr-only"> (otvorí sa v novej karte)</span></AppLink>. Prijatie pravidiel nie je súhlasom s marketingom ani všeobecným súhlasom so spracúvaním údajov.</span></label>
           <p v-if="error" class="form-error mt-4" role="alert">{{ error }}</p>
           <button
             class="button-md mt-6 flex w-full items-center justify-between gap-4 rounded-sm bg-race px-3 py-3 text-white hover:bg-race-hover active:scale-[.98]"

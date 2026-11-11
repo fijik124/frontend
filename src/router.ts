@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useMembership } from './stores/membership'
+import { legalReady } from './config/legal'
 
 const dashboard = () => import('./components/MemberDashboard.vue')
 const dashboardRoutes = [
@@ -17,6 +18,9 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: () => import('./components/HomePage.vue'), meta: { layout: 'site', title: 'Motokros je náš svet' } },
     { path: '/preteky', name: 'race', component: () => import('./components/RacePage.vue'), meta: { layout: 'site', title: 'Informácie o pretekoch' } },
+    { path: '/ochrana-osobnych-udajov', name: 'privacy', component: () => import('./components/LegalPage.vue'), props: { document: 'privacy' }, meta: { layout: 'legal', title: 'Ochrana osobných údajov', noindex: !legalReady } },
+    { path: '/pravidla-pouzivania', name: 'terms', component: () => import('./components/LegalPage.vue'), props: { document: 'terms' }, meta: { layout: 'legal', title: 'Pravidlá používania', noindex: !legalReady } },
+    { path: '/cookies', name: 'cookies', component: () => import('./components/LegalPage.vue'), props: { document: 'cookies' }, meta: { layout: 'legal', title: 'Cookies a úložisko', noindex: !legalReady } },
     { path: '/prihlasenie', name: 'login', component: () => import('./components/AuthPage.vue'), props: { mode: 'login' }, meta: { layout: 'auth', title: 'Prihlásenie členov', noindex: true } },
     { path: '/registracia', name: 'register', component: () => import('./components/AuthPage.vue'), props: { mode: 'register' }, meta: { layout: 'auth', title: 'Registrácia s licenciou', noindex: true } },
     { path: '/obnova-hesla', name: 'password-reset', component: () => import('./components/PasswordResetPage.vue'), meta: { layout: 'auth', title: 'Obnovenie hesla', noindex: true } },
@@ -31,6 +35,8 @@ export const router = createRouter({
   },
 })
 router.beforeEach(async to => {
+  // Právne informácie musia byť dostupné aj bez prihlásenia či dostupného backendu.
+  if (to.meta.layout === 'legal') return
   const { currentMember, hasPermission, initialize } = useMembership()
   await initialize()
   if (to.meta.requiresSession && (!currentMember.value || currentMember.value.status === 'inactive')) return { name: 'login', query: { redirect: to.fullPath } }

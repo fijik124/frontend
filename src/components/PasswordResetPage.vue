@@ -37,6 +37,7 @@ async function submit() {
           </template>
           <label v-else class="form-label" for="reset-email">Email člena<input id="reset-email" v-model="email" type="email" class="form-input" autocomplete="email" required maxlength="180" /></label>
           <p v-if="error" class="form-error mt-4" role="alert">{{ error }}</p>
+          <p class="body-6 mt-6 text-ink/70">Údaje použijeme na overenie účtu a obnovenie prístupu. Viac v <AppLink href="/ochrana-osobnych-udajov" class="text-race underline underline-offset-4">ochrane osobných údajov</AppLink>.</p>
           <button class="dashboard-primary mt-6" type="submit">{{ busy ? 'Spracúvame…' : token ? 'Uložiť nové heslo' : 'Odoslať odkaz' }}</button>
         </fieldset>
       </form>

@@ -3,6 +3,7 @@ import { computed, ref, watch, watchEffect } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import SiteHeader from './components/SiteHeader.vue'
 import SiteFooter from './components/SiteFooter.vue'
+import LegalLinks from './components/LegalLinks.vue'
 import MotocrossRide from './components/MotocrossRide.vue'
 import BackToTop from './components/BackToTop.vue'
 import { useMembership } from './stores/membership'
@@ -13,6 +14,7 @@ const router = useRouter()
 const menuOpen = ref(false)
 const ride = ref<InstanceType<typeof MotocrossRide> | null>(null)
 const marketingPage = computed(() => route.meta.layout === 'site')
+const siteShell = computed(() => marketingPage.value || route.meta.layout === 'legal')
 const { currentMember, hasPermission } = useMembership()
 const { raceSettings, raceStorageError, raceLoading, loadRace } = useRaceSettings()
 watch([currentMember, () => route.fullPath], () => {
@@ -26,11 +28,12 @@ watchEffect(() => {
 </script>
 <template>
   <a href="#main-content" class="skip-link button-sm">Preskočiť na obsah</a>
-  <SiteHeader v-if="marketingPage" v-model:menu-open="menuOpen" />
+  <SiteHeader v-if="siteShell" v-model:menu-open="menuOpen" />
   <div :inert="menuOpen">
     <div v-if="marketingPage && (raceLoading || raceStorageError)" class="page-width py-6" role="status"><p>{{ raceLoading ? 'Načítavame údaje o pretekoch…' : raceStorageError }}</p><button v-if="raceStorageError" class="dashboard-secondary mt-4" @click="loadRace">Skúsiť znova</button></div>
     <RouterView v-slot="{ Component, route: activeRoute }"><component :is="Component" :key="activeRoute.meta.layout === 'dashboard' ? 'dashboard' : activeRoute.name" /></RouterView>
-    <SiteFooter v-if="marketingPage" />
+    <SiteFooter v-if="siteShell" />
+    <footer v-else class="bg-paper px-6 py-8 text-ink"><LegalLinks class="mx-auto max-w-6xl" /></footer>
     <MotocrossRide v-if="route.name === 'home' || route.name === 'race'" ref="ride" :key="route.path" />
     <BackToTop v-if="route.name === 'home'" @go-top="ride?.stop(false)" />
   </div>

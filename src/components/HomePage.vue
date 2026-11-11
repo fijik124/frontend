@@ -103,28 +103,6 @@ onUnmounted(() => observer?.disconnect());
       }"
       @secondary-action="setMode(heroMode === 'main' ? 'next-race' : 'main')"
     />
-    <div
-      class="manifesto-strip overflow-hidden bg-race py-4 text-white"
-      aria-label="Pre jazdcov. Pre fanúšikov. Pre motokros."
-    >
-      <div
-        class="page-width flex items-center justify-between gap-8 whitespace-nowrap"
-      >
-        <span class="title-3 flex items-center gap-4"
-          ><span class="checkered-mark" aria-hidden="true"></span> Pre
-          jazdcov.</span
-        >
-        <span class="title-3 flex items-center gap-4"
-          ><span class="checkered-mark" aria-hidden="true"></span> Pre
-          fanúšikov.</span
-        >
-        <span class="title-3 flex items-center gap-4"
-          ><span class="checkered-mark" aria-hidden="true"></span> Pre
-          motokros.</span
-        >
-        <span class="caption-3 hidden lg:block">Jeden klub. Jedna vášeň.</span>
-      </div>
-    </div>
     <section
       id="podujatie"
       class="bg-paper py-12 text-ink lg:py-16"
