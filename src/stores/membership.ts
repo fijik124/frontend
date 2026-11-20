@@ -38,6 +38,7 @@ export interface MemberLicense {
   issuedAt: string
   status: 'available' | 'used' | 'revoked'
   memberId: string | null
+  removable: boolean
   validUntil: string | null
   role: MemberRole
 }
@@ -102,6 +103,7 @@ export const useMembershipStore = defineStore('membership', () => {
   async function removeMember(id: string) { return mutate(() => api('/members/' + encodeURIComponent(id), json('DELETE', {}))) }
   async function issueLicense(firstName: string, lastName: string, options = { validUntil: null as string | null, role: 'member' as MemberRole }) { return mutate(() => api<MemberLicense>('/licenses', json('POST', { firstName, lastName, ...options }))) }
   async function revokeLicense(id: string) { return mutate(() => api('/licenses/' + encodeURIComponent(id) + '/revoke', json('POST', {}))) }
+  async function removeLicense(id: string) { return mutate(() => api('/licenses/' + encodeURIComponent(id), json('DELETE', {}))) }
   async function updateLicenseValidity(id: string, validUntil: string | null) { return mutate(() => api('/licenses/' + encodeURIComponent(id), json('PATCH', { validUntil }))) }
   async function saveRole(input: { id?: string; name: string; description: string; permissions: Permission[] }) {
     const { id, ...body } = input
@@ -113,12 +115,12 @@ export const useMembershipStore = defineStore('membership', () => {
   window.addEventListener('amk:session-expired', onExpired); window.addEventListener('focus', onFocus)
   onScopeDispose(() => { window.removeEventListener('amk:session-expired', onExpired); window.removeEventListener('focus', onFocus) })
   return { members, licenses, roles, activity, currentMember, currentLicense, currentRole, isAdmin, isStaff, loading, busy, storageError, initialized,
-    hasPermission, roleName, initialize, login, register, logout, verifyLicense, createMember, updateMember, updateProfile, removeMember, issueLicense, revokeLicense, updateLicenseValidity, saveRole, deleteRole }
+    hasPermission, roleName, initialize, login, register, logout, verifyLicense, createMember, updateMember, updateProfile, removeMember, issueLicense, revokeLicense, removeLicense, updateLicenseValidity, saveRole, deleteRole }
 })
 export function useMembership() {
   const store = useMembershipStore()
   return { ...storeToRefs(store), hasPermission: store.hasPermission, roleName: store.roleName, initialize: store.initialize,
     login: store.login, register: store.register, logout: store.logout, verifyLicense: store.verifyLicense, createMember: store.createMember,
     updateMember: store.updateMember, updateProfile: store.updateProfile, removeMember: store.removeMember, issueLicense: store.issueLicense,
-    revokeLicense: store.revokeLicense, updateLicenseValidity: store.updateLicenseValidity, saveRole: store.saveRole, deleteRole: store.deleteRole }
+    revokeLicense: store.revokeLicense, removeLicense: store.removeLicense, updateLicenseValidity: store.updateLicenseValidity, saveRole: store.saveRole, deleteRole: store.deleteRole }
 }

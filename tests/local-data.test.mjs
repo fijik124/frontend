@@ -97,6 +97,32 @@ test('development keeps all data and workflows local', async t => {
     await login('rider@example.test', 'changed-local-password')
   })
 
+  await t.test('unused licenses can be removed, while used licenses stay attached and unusable codes fail registration', async () => {
+    await login()
+    const unused = await api('/licenses', json('POST', { firstName: 'Unused', lastName: 'License', role: 'member', validUntil: null }))
+    const remove = id => api('/licenses/' + id, json('DELETE', {}))
+    assert.equal(unused.removable, true)
+    await api('/auth/sign-out', json('POST', {}))
+    await assert.rejects(remove(unused.id), error => error.status === 401)
+    await login('member@example.test')
+    await assert.rejects(remove(unused.id), error => error.status === 403)
+    await login('pending@example.test')
+    await assert.rejects(remove(unused.id), error => error.status === 403)
+    await login()
+    const assigned = (await api('/licenses')).find(item => item.memberId === 'local-member')
+    assert.equal(assigned.removable, false)
+    await assert.rejects(remove(assigned.id), error => error.status === 409)
+    assert.equal(await remove(unused.id), undefined)
+    assert.ok(!(await api('/licenses')).some(item => item.id === unused.id))
+    await assert.rejects(api('/licenses/check', json('POST', { code: unused.code, firstName: 'Unused', lastName: 'License' })), error => error.status === 400)
+    await assert.rejects(remove(unused.id), error => error.status === 404)
+    const revoked = await api('/licenses', json('POST', { firstName: 'Revoked', lastName: 'License', role: 'member', validUntil: null }))
+    await api('/licenses/' + revoked.id + '/revoke', json('POST', {}))
+    assert.equal((await api('/licenses')).find(item => item.id === revoked.id).removable, true)
+    await remove(revoked.id)
+    assert.ok(!JSON.parse(localStorage.getItem('amk:local-data:v1')).licenses.some(item => item.id === revoked.id))
+  })
+
   await t.test('training dates stay public when cancelled and edits reject stale versions', async () => {
     await login()
     const input = { title: 'Tréning', startsAt: '2027-05-20T07:00:00.000Z', endsAt: '', location: 'Testovacia trať', meetingPoint: '', notes: 'Vlastná výstroj.', cancelled: false, cancellationReason: '' }
@@ -119,6 +145,26 @@ test('development keeps all data and workflows local', async t => {
     const restored = await api(`/trainings/${training.id}`, { ...json('PUT', { ...input, cancellationReason: 'Old reason' }), headers: { 'If-Match': '"2"' } })
     assert.equal(restored.cancelled, false)
     assert.equal(restored.cancellationReason, '')
+  })
+
+  await t.test('training removal requires permission and the current version, and persists publicly', async () => {
+    const training = (await api('/trainings'))[0]
+    const remove = (version = training.version, id = training.id) => api('/trainings/' + id, { ...json('DELETE', {}), headers: { 'If-Match': JSON.stringify(String(version)) } })
+    await api('/auth/sign-out', json('POST', {}))
+    await assert.rejects(remove(), error => error.status === 401)
+    await login('member@example.test')
+    await assert.rejects(remove(), error => error.status === 403)
+    await login('pending@example.test')
+    await assert.rejects(remove(), error => error.status === 403)
+    await login()
+    await assert.rejects(remove(training.version - 1), error => error.status === 412)
+    await assert.rejects(remove(1, 'missing-training'), error => error.status === 404)
+    assert.ok((await api('/trainings')).some(item => item.id === training.id))
+    assert.equal(await remove(), undefined)
+    assert.ok(!JSON.parse(localStorage.getItem('amk:local-data:v1')).trainings.some(item => item.id === training.id))
+    await assert.rejects(remove(), error => error.status === 404)
+    await api('/auth/sign-out', json('POST', {}))
+    assert.ok(!(await api('/trainings')).some(item => item.id === training.id))
   })
 
   await t.test('marshal calendar needs separate read/write permissions and never leaks into public dates', async () => {

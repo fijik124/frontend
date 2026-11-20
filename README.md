@@ -54,6 +54,7 @@ the frontend's origin.
 - /obnova-hesla requests a password reset or completes one using the emailed token.
 - Existing member, license, role, profile and race management URLs remain available in /clenska-zona. Members edit only their own phone and start number. Authorized staff manage licensed names, roles, approvals and contribution status.
 - Administrators can invite members directly, issue licenses and extend their validity without changing the license number. Built-in roles and custom roles use one unified permission system.
+- Staff with `licenses.manage` can permanently remove unused licenses after confirmation, including revoked or expired unused codes. Used licenses remain protected as part of the member record. `DELETE /api/licenses/:id` returns 204 on success, 409 for a used license, and 404 when missing; it rechecks eligibility atomically against registration. License responses include `removable` for displaying the delete action.
 - /clenska-zona/nastavenia contains account information and exports. Demo login, public administrator switching and demo reset are removed.
 
 In production, Pinia contains only in-memory UI state. Members, licenses, roles, race settings and sessions persist in PostgreSQL through the backend. Authentication uses HttpOnly cookie sessions; no credentials or session identifiers are stored in browser storage. Development sample data is not imported as real identities. Production server failures show errors and never activate demo authentication.
@@ -65,7 +66,7 @@ Configure production hosting to serve index.html for Vue application routes and 
 ## Training dates and track marshals
 
 - `/treningy` is the public training calendar. Cancelled dates remain visible with a reason; past dates can be found by selecting their day in the calendar.
-- `/clenska-zona/treningy` lets staff with `trainings.manage` add, edit, cancel and restore training dates. All training details are public.
+- `/clenska-zona/treningy` lets staff with `trainings.manage` add, edit, cancel, restore and permanently remove training dates after confirmation. Removed dates disappear from the public list and calendar. All training details are public.
 - `/clenska-zona/komisari` shows the private marshal calendar with locations, team meeting points and instructions. Access requires `marshals.read` or `marshals.manage`; only `marshals.manage` can edit. Assign these permissions through Roles. New local datasets also include a read-only **Traťový komisár** role.
 - Date entry and display use `Europe/Bratislava`, including daylight saving time. The default list includes today and future dates; the month calendar also allows viewing past dates.
 - Development saves both calendars in the existing browser-local dataset. Existing local data gains empty calendars and the administrator gains the new permissions without resetting members or race settings.
@@ -79,6 +80,7 @@ The matching backend implementation is in `C:/Users/Filip/Documents/git/backend`
 | `GET /api/trainings` | Public | `ClubEvent[]`, including cancelled and historical dates |
 | `POST /api/trainings` | Active session with `trainings.manage` | Created `ClubEvent`, status 201 |
 | `PUT /api/trainings/:id` | Active session with `trainings.manage` | Updated `ClubEvent` |
+| `DELETE /api/trainings/:id` | Active session with `trainings.manage` | Requires `If-Match: "<version>"`; permanently removes the training, status 204 |
 | `GET /api/marshal-events` | Active session with `marshals.read` or `marshals.manage` | `ClubEvent[]` |
 | `POST /api/marshal-events` | Active session with `marshals.manage` | Created `ClubEvent`, status 201 |
 | `PUT /api/marshal-events/:id` | Active session with `marshals.manage` | Updated `ClubEvent` |

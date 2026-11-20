@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { api, json } from '../api'
 import { useMembership } from '../stores/membership'
 import { raceIsoDate, raceLocalDate } from '../stores/race'
@@ -19,6 +19,8 @@ const monthLabel = computed(() => new Intl.DateTimeFormat('sk-SK', { month: 'lon
 const upcoming = computed(() => upcomingEvents(events.value, today.value))
 const visible = computed(() => selectedDay.value ? eventsOnDay(events.value, selectedDay.value) : upcoming.value)
 const editor = ref<HTMLDialogElement | null>(null)
+const removal = ref<HTMLDialogElement | null>(null), removing = ref<ClubEvent | null>(null), removeError = ref('')
+const listTitle = ref<HTMLElement | null>(null)
 const editing = ref<ClubEvent | null>(null), draft = ref<EventInput>(emptyEvent())
 const start = ref(''), end = ref(''), formError = ref('')
 let timer: ReturnType<typeof setInterval> | undefined
@@ -60,6 +62,22 @@ async function save() {
   } catch (cause) { formError.value = cause instanceof Error ? cause.message : 'Termín sa nepodarilo uložiť.' }
   finally { saving.value = false }
 }
+function askRemove(event: ClubEvent) {
+  removing.value = event; removeError.value = ''; message.value = ''
+  removal.value?.showModal()
+}
+async function removeTraining() {
+  if (!training.value || !canEdit.value || !removing.value || saving.value) return
+  const event = removing.value
+  saving.value = true; removeError.value = ''
+  try {
+    await api('/trainings/' + encodeURIComponent(event.id), { ...json('DELETE', {}), headers: { 'If-Match': `"${event.version}"` } })
+    events.value = events.value.filter(item => item.id !== event.id)
+    removal.value?.close(); removing.value = null; message.value = 'Tréning bol odstránený.'
+    await nextTick(); listTitle.value?.focus()
+  } catch (cause) { removeError.value = cause instanceof Error ? cause.message : 'Tréning sa nepodarilo odstrániť.' }
+  finally { saving.value = false }
+}
 onMounted(() => {
   void load()
   timer = setInterval(() => { today.value = eventDay(new Date().toISOString()) }, 60000)
@@ -92,7 +110,7 @@ onUnmounted(() => clearInterval(timer))
         <button class="dashboard-secondary mt-4" @click="month = today.slice(0, 7); selectedDay = ''">Dnes a najbližšie termíny</button>
       </section>
       <section class="min-w-0" aria-labelledby="event-list-title" aria-live="polite">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="event-list-title" class="heading-5">{{ selectedDay ? `Termíny: ${selectedDay.split('-').reverse().join('. ')}` : 'Najbližšie termíny' }}</h2><button v-if="selectedDay" class="dashboard-secondary" @click="selectedDay = ''">Všetky najbližšie</button></div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="event-list-title" ref="listTitle" tabindex="-1" class="heading-5">{{ selectedDay ? `Termíny: ${selectedDay.split('-').reverse().join('. ')}` : 'Najbližšie termíny' }}</h2><button v-if="selectedDay" class="dashboard-secondary" @click="selectedDay = ''">Všetky najbližšie</button></div>
         <div class="grid gap-4">
           <article v-for="event in visible" :key="event.id" class="dashboard-card p-6" :class="{ 'border-red-700/30': event.cancelled }">
             <div class="flex flex-wrap items-start justify-between gap-3"><h3 class="heading-5 min-w-0 break-words" :class="{ 'line-through': event.cancelled }">{{ event.title }}</h3><span class="body-6 rounded-sm px-3 py-1" :class="event.cancelled ? 'bg-red-50 text-red-800' : 'bg-emerald-50 text-emerald-800'">{{ event.cancelled ? (training ? 'Tréning zrušený' : 'Podujatie zrušené') : 'Plánované' }}</span></div>
@@ -101,12 +119,20 @@ onUnmounted(() => clearInterval(timer))
             <p v-if="event.cancelled" class="body-3 mt-4 whitespace-pre-line break-words text-red-800">{{ event.cancellationReason || 'Termín bol zrušený organizátorom.' }}</p>
             <p v-if="event.meetingPoint" class="body-3 mt-4 whitespace-pre-line break-words"><strong>Miesto stretnutia:</strong> {{ event.meetingPoint }}</p>
             <p v-if="event.notes" class="body-3 mt-4 whitespace-pre-line break-words text-ink/65">{{ event.notes }}</p>
-            <button v-if="canEdit" class="dashboard-secondary mt-6" :aria-label="'Upraviť termín: ' + event.title" @click="edit(event)">Upraviť / {{ event.cancelled ? 'obnoviť termín' : 'zrušiť termín' }}</button>
+            <div v-if="canEdit" class="mt-6 flex flex-wrap gap-3"><button class="dashboard-secondary" :aria-label="'Upraviť termín: ' + event.title" @click="edit(event)">Upraviť / {{ event.cancelled ? 'obnoviť termín' : 'zrušiť termín' }}</button><button v-if="training" class="dashboard-secondary text-race" :aria-label="'Odstrániť tréning: ' + event.title" @click="askRemove(event)">Odstrániť tréning</button></div>
           </article>
           <div v-if="!visible.length" class="dashboard-card p-6"><h3 class="heading-5">{{ selectedDay ? 'Na tento deň nie je naplánované podujatie.' : (training ? 'Nové tréningy pripravujeme.' : 'Ďalšie podujatia pripravujeme.') }}</h3><p class="body-3 mt-4 text-ink/65">{{ selectedDay ? 'Vyber iný deň alebo zobraz všetky najbližšie termíny.' : 'Keď bude známy nový termín, nájdeš ho tu.' }}</p></div>
         </div>
       </section>
     </div>
+    <dialog v-if="canEdit && training" ref="removal" class="member-dialog" aria-labelledby="training-remove-title" aria-describedby="training-remove-description" @cancel="saving && $event.preventDefault()">
+      <div :inert="saving" :aria-busy="saving">
+        <h2 id="training-remove-title" class="heading-5">Odstrániť tréning?</h2>
+        <p id="training-remove-description" class="body-3 mt-4 break-words">Tréning „{{ removing?.title }}“ {{ removing ? eventDate(removing.startsAt) : '' }} sa natrvalo odstráni z verejného zoznamu aj kalendára. Túto akciu nemožno vrátiť späť.</p>
+        <p v-if="removeError" class="form-error mt-4" role="alert">{{ removeError }}</p>
+        <div class="mt-6 flex flex-wrap justify-end gap-3"><button autofocus type="button" class="dashboard-secondary" @click="removal?.close()">Ponechať tréning</button><button type="button" class="dashboard-primary" @click="removeTraining">{{ saving ? 'Odstraňujeme…' : 'Natrvalo odstrániť' }}</button></div>
+      </div>
+    </dialog>
     <dialog v-if="canEdit" ref="editor" class="member-dialog" aria-labelledby="event-editor-title" @cancel="saving && $event.preventDefault()">
       <form :inert="saving" :aria-busy="saving" @submit.prevent="save">
         <div class="flex items-start justify-between gap-4"><h2 id="event-editor-title" class="heading-5">{{ editing ? 'Upraviť termín' : (training ? 'Nový tréning' : 'Nové podujatie') }}</h2><button type="button" class="table-icon-button" aria-label="Zavrieť formulár" @click="editor?.close()">×</button></div>

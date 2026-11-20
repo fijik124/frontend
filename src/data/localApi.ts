@@ -34,7 +34,7 @@ function seed(): LocalData {
   ]
   return {
     members,
-    licenses: members.map((member, index) => ({ id: `local-license-${index}`, code: `AMK-LOCAL-0000${index + 1}`, firstName: member.firstName, lastName: member.lastName, issuedAt: joinedAt, status: 'used', memberId: member.id, validUntil: null, role: member.role })),
+    licenses: members.map((member, index) => ({ id: `local-license-${index}`, code: `AMK-LOCAL-0000${index + 1}`, firstName: member.firstName, lastName: member.lastName, issuedAt: joinedAt, status: 'used', memberId: member.id, removable: false, validUntil: null, role: member.role })),
     roles: [
       { id: 'admin', name: 'Správca', description: 'Správa klubu', permissions: [...permissions], protected: true },
       { id: 'member', name: 'Člen', description: 'Členský profil a licencia', permissions: [], protected: false },
@@ -60,6 +60,8 @@ function load(): LocalData {
   if (saved) {
     const data = JSON.parse(saved) as LocalData
     data.trainings ??= []; data.marshalEvents ??= []
+    // shortcut: Legacy revoked demo licenses stay protected; reset sample data to distinguish unused ones.
+    data.licenses.forEach(license => { license.removable ??= license.status === 'available' && !license.memberId })
     const admin = data.roles.find(role => role.id === 'admin')
     if (admin) admin.permissions = [...permissions]
     return data
@@ -87,7 +89,7 @@ export async function localApiResponse(path: string, options: RequestInit = {}):
   const duplicateEmail = (exceptId?: string) => data.members.some(member => member.id !== exceptId && member.email.toLowerCase() === email())
   const newLicense = (firstName: string, lastName: string, role: string, memberId: string | null = null): MemberLicense => ({
     id: id(), code: `AMK-LOCAL-${id().replaceAll('-', '').slice(0, 10).toUpperCase()}`, firstName, lastName, role, memberId,
-    issuedAt: now(), status: memberId ? 'used' : 'available', validUntil: value('validUntil') || null,
+    issuedAt: now(), status: memberId ? 'used' : 'available', removable: !memberId, validUntil: value('validUntil') || null,
   })
   const checkLicense = () => data.licenses.find(license =>
     license.code === value('code').toUpperCase() && license.firstName === value('firstName') && license.lastName === value('lastName') &&
@@ -114,7 +116,7 @@ export async function localApiResponse(path: string, options: RequestInit = {}):
     const member: Member = { id: id(), firstName: license.firstName, lastName: license.lastName, name: `${license.firstName} ${license.lastName}`, email: email(), phone: '', number: '', status: 'pending', role: license.role, joinedAt: now(), feePaid: false }
     data.members.push(member)
     data.passwords[member.id] = body.password as string
-    license.memberId = member.id; license.status = 'used'
+    license.memberId = member.id; license.status = 'used'; license.removable = false
     log(`Nová žiadosť: ${member.name}`)
     return save({ message: 'Lokálna registrácia je dokončená. Môžete sa prihlásiť; schválenie vykoná správca.' })
   }
@@ -143,12 +145,17 @@ export async function localApiResponse(path: string, options: RequestInit = {}):
     const list = kind === 'trainings' ? data.trainings : data.marshalEvents
     const eventId = eventMatch[2] ? decodeURIComponent(eventMatch[2]) : ''
     if (method === 'GET' && !eventId && kind === 'marshal-events') return can('marshals.read') || can('marshals.manage') ? reply(list) : error(403, 'Nemáte oprávnenie zobraziť zónu komisárov.')
-    if (method !== 'POST' && method !== 'PUT') return error(405, 'Táto operácia nie je podporovaná.')
+    if (method !== 'POST' && method !== 'PUT' && !(method === 'DELETE' && kind === 'trainings' && eventId)) return error(405, 'Táto operácia nie je podporovaná.')
     if (!can(kind === 'trainings' ? 'trainings.manage' : 'marshals.manage')) return error(403, 'Nemáte oprávnenie spravovať tieto termíny.')
     if ((method === 'POST' && eventId) || (method === 'PUT' && !eventId)) return error(405, 'Táto operácia nie je podporovaná.')
     const event = eventId ? list.find(item => item.id === eventId) : undefined
     if (eventId && !event) return error(404, 'Termín neexistuje.')
     if (event && new Headers(options.headers).get('If-Match') !== `"${event.version}"`) return error(412, 'Termín sa medzitým zmenil. Zavri formulár, obnov stránku a zopakuj úpravu.')
+    if (method === 'DELETE') {
+      data.trainings = list.filter(item => item.id !== eventId)
+      log('Tréning bol odstránený.')
+      return save(null, 204)
+    }
     const invalid = validateEvent(body as unknown as EventInput)
     if (invalid) return error(400, invalid)
     const input = Object.fromEntries(Object.keys(emptyEvent()).map(key => [key, typeof body[key] === 'string' ? value(key) : body[key]])) as unknown as EventInput
@@ -221,6 +228,15 @@ export async function localApiResponse(path: string, options: RequestInit = {}):
     return save(license, 201)
   }
   const licenseMatch = path.match(/^\/licenses\/([^/]+)(\/revoke)?$/)
+  if (licenseMatch && !licenseMatch[2] && method === 'DELETE') {
+    if (!can('licenses.manage')) return error(403, 'Nemáte oprávnenie spravovať licencie.')
+    const license = data.licenses.find(item => item.id === decodeURIComponent(licenseMatch[1]!))
+    if (!license) return error(404, 'Licencia neexistuje.')
+    if (!license.removable || license.memberId) return error(409, 'Použitú alebo priradenú licenciu nemožno odstrániť.')
+    data.licenses = data.licenses.filter(item => item.id !== license.id)
+    log('Nepoužitá licencia bola odstránená.')
+    return save(null, 204)
+  }
   if (licenseMatch && (method === 'PATCH' || method === 'POST' && licenseMatch[2])) {
     if (!can('licenses.manage')) return error(403, 'Nemáte oprávnenie spravovať licencie.')
     const license = data.licenses.find(item => item.id === decodeURIComponent(licenseMatch[1]!))
