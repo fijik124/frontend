@@ -62,6 +62,31 @@ Configure production hosting to serve index.html for Vue application routes and 
 
 ## Website components
 
+## Training dates and track marshals
+
+- `/treningy` is the public training calendar. Cancelled dates remain visible with a reason; past dates can be found by selecting their day in the calendar.
+- `/clenska-zona/treningy` lets staff with `trainings.manage` add, edit, cancel and restore training dates. All training details are public.
+- `/clenska-zona/komisari` shows the private marshal calendar with locations, team meeting points and instructions. Access requires `marshals.read` or `marshals.manage`; only `marshals.manage` can edit. Assign these permissions through Roles. New local datasets also include a read-only **Traťový komisár** role.
+- Date entry and display use `Europe/Bratislava`, including daylight saving time. The default list includes today and future dates; the month calendar also allows viewing past dates.
+- Development saves both calendars in the existing browser-local dataset. Existing local data gains empty calendars and the administrator gains the new permissions without resetting members or race settings.
+
+### Production backend contract
+
+The matching backend implementation is in `C:/Users/Filip/Documents/git/backend`. Deploy its calendar endpoints and apply `002_event_calendars.sql` through the normal migration runner before releasing this frontend. The migration creates persistent storage, adds the three permissions above to the administrator role and adds a read-only marshal role. Client route guards are backed by server authorization.
+
+| Endpoint | Access | Response |
+| --- | --- | --- |
+| `GET /api/trainings` | Public | `ClubEvent[]`, including cancelled and historical dates |
+| `POST /api/trainings` | Active session with `trainings.manage` | Created `ClubEvent`, status 201 |
+| `PUT /api/trainings/:id` | Active session with `trainings.manage` | Updated `ClubEvent` |
+| `GET /api/marshal-events` | Active session with `marshals.read` or `marshals.manage` | `ClubEvent[]` |
+| `POST /api/marshal-events` | Active session with `marshals.manage` | Created `ClubEvent`, status 201 |
+| `PUT /api/marshal-events/:id` | Active session with `marshals.manage` | Updated `ClubEvent` |
+
+The request body is `EventInput` in `src/data/events.ts`: required `title`, `startsAt` (ISO timestamp with timezone), `location` and `cancelled` (boolean), plus `endsAt`, `meetingPoint`, `notes` and `cancellationReason` (empty strings when unused). Responses add a server-generated `id` and integer `version` starting at 1. Updates require `If-Match: "<version>"`; the backend checks and increments versions atomically, returning 412 for conflicts and 404 for missing dates. Server validation enforces the same field limits as `validateEvent`, rejects unknown fields and clears cancellation reasons on restoration. Errors use the existing `{ error: { code, message } }` envelope.
+
+Marshal details are excluded from public endpoints, caches and general activity logs. Verify local flows with `node --test tests/local-data.test.mjs` and `npm run build`; the backend's integration and browser suites verify the production API and UI with disposable PostgreSQL databases.
+
 ## Ride mode
 
 Select **Zajazdi si** in the homepage or race hero. Use W/A/S/D or the arrow keys to

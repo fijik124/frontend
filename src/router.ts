@@ -10,6 +10,8 @@ const dashboardRoutes = [
   { path: '/clenska-zona/ziadosti', name: 'dashboard-requests', tab: 'requests', title: 'Žiadosti', permissions: ['members.write'] },
   { path: '/clenska-zona/roly', name: 'dashboard-roles', tab: 'roles', title: 'Roly a oprávnenia', permissions: ['roles.manage'] },
   { path: '/clenska-zona/preteky', name: 'dashboard-race', tab: 'race', title: 'Nastavenia pretekov', permissions: ['race.manage'] },
+  { path: '/clenska-zona/treningy', name: 'dashboard-trainings', tab: 'trainings', title: 'Správa tréningov', permissions: ['trainings.manage'] },
+  { path: '/clenska-zona/komisari', name: 'dashboard-marshals', tab: 'marshals', title: 'Zóna traťových komisárov', permissions: ['marshals.read', 'marshals.manage'] },
   { path: '/clenska-zona/moj-profil', name: 'dashboard-profile', tab: 'profile', title: 'Môj profil' },
   { path: '/clenska-zona/nastavenia', name: 'dashboard-settings', tab: 'settings', title: 'Nastavenia účtu', permissions: ['roles.manage'] },
 ]
@@ -18,6 +20,7 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: () => import('./components/HomePage.vue'), meta: { layout: 'site', title: 'Motokros je náš svet' } },
     { path: '/preteky', name: 'race', component: () => import('./components/RacePage.vue'), meta: { layout: 'site', title: 'Informácie o pretekoch' } },
+    { path: '/treningy', name: 'trainings', component: () => import('./components/TrainingPage.vue'), meta: { layout: 'site', title: 'Tréningy a aktuálne termíny' } },
     { path: '/ochrana-osobnych-udajov', name: 'privacy', component: () => import('./components/LegalPage.vue'), props: { document: 'privacy' }, meta: { layout: 'legal', title: 'Ochrana osobných údajov', noindex: !legalReady } },
     { path: '/pravidla-pouzivania', name: 'terms', component: () => import('./components/LegalPage.vue'), props: { document: 'terms' }, meta: { layout: 'legal', title: 'Pravidlá používania', noindex: !legalReady } },
     { path: '/cookies', name: 'cookies', component: () => import('./components/LegalPage.vue'), props: { document: 'cookies' }, meta: { layout: 'legal', title: 'Cookies a úložisko', noindex: !legalReady } },

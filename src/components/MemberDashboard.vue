@@ -5,6 +5,7 @@ import AppLink from './AppLink.vue'
 import RaceIcon from './RaceIcon.vue'
 import MemberFields from './MemberFields.vue'
 import RaceSettings from './RaceSettings.vue'
+import EventSchedule from './EventSchedule.vue'
 import MemberLicenseCard from './MemberLicenseCard.vue'
 import RoleSettings from './RoleSettings.vue'
 import { navigate } from '../composables/useAppRouter'
@@ -12,7 +13,7 @@ import { useRaceSettings } from '../stores/race'
 import { useMembership, statusLabels, licenseExpired, todaySlovakia, type Member, type MemberInput, type MemberStatus, type MemberLicense, type MemberRole } from '../stores/membership'
 
 const { members, licenses, roles, activity, currentMember, currentLicense, isAdmin, isStaff, hasPermission, roleName, storageError, createMember, updateMember, removeMember, updateProfile, busy, loading, logout, issueLicense, revokeLicense, updateLicenseValidity } = useMembership()
-type Tab = 'overview' | 'members' | 'licenses' | 'requests' | 'profile' | 'race' | 'roles' | 'settings'
+type Tab = 'overview' | 'members' | 'licenses' | 'requests' | 'profile' | 'race' | 'roles' | 'settings' | 'trainings' | 'marshals'
 const route = useRoute()
 const { raceSettings: clubRace, fullRaceDate } = useRaceSettings()
 const tab = computed<Tab>(() => (route.meta.dashboardTab as Tab) ?? 'overview')
@@ -52,7 +53,7 @@ const filteredLicenses = computed(() => licenses.value.filter(license => normali
 const blank = (): MemberInput => ({ firstName: '', lastName: '', name: '', email: '', phone: '', role: 'member', status: 'active', feePaid: false, number: '' })
 const form = ref<MemberInput>(blank())
 const profile = ref<MemberInput>(blank())
-const tabNames: Record<Tab, string> = { overview: 'Prehľad', members: 'Členovia', licenses: 'Členské licencie', requests: 'Žiadosti', profile: 'Môj profil', race: 'Najbližšie preteky', roles: 'Roly a oprávnenia', settings: 'Nastavenia účtu' }
+const tabNames: Record<Tab, string> = { overview: 'Prehľad', members: 'Členovia', licenses: 'Členské licencie', requests: 'Žiadosti', profile: 'Môj profil', race: 'Najbližšie preteky', roles: 'Roly a oprávnenia', settings: 'Nastavenia účtu', trainings: 'Tréningy', marshals: 'Traťoví komisári' }
 const menu = computed(() => ([
   { id: 'overview', name: 'Prehľad', icon: 'grid', show: true },
   { id: 'members', name: 'Členovia', icon: 'people', show: canViewMembers.value },
@@ -60,6 +61,8 @@ const menu = computed(() => ([
   { id: 'requests', name: 'Žiadosti', icon: 'mail', show: canWriteMembers.value },
   { id: 'roles', name: 'Roly a oprávnenia', icon: 'settings', show: hasPermission('roles.manage') },
   { id: 'race', name: 'Preteky', icon: 'helmet', show: hasPermission('race.manage') },
+  { id: 'trainings', name: 'Tréningy', icon: 'calendar', show: hasPermission('trainings.manage') },
+  { id: 'marshals', name: 'Traťoví komisári', icon: 'flag', show: hasPermission('marshals.read') || hasPermission('marshals.manage') },
   { id: 'profile', name: 'Môj profil', icon: 'helmet', show: true },
   { id: 'settings', name: 'Nastavenia účtu', icon: 'settings', show: hasPermission('roles.manage') },
 ] as const).filter(item => item.show))
@@ -87,7 +90,7 @@ function initials(name: string) { return name.split(/\s+/).map(part => part[0]).
 function date(value: string) { return new Intl.DateTimeFormat('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value)) }
 function notify(message: string) { toast.value = message; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast.value = '' }, 5000) }
 function selectTab(value: Tab) {
-  const paths: Record<Tab, string> = { overview: '/clenska-zona', members: '/clenska-zona/clenovia', licenses: '/clenska-zona/licencie', requests: '/clenska-zona/ziadosti', roles: '/clenska-zona/roly', race: '/clenska-zona/preteky', profile: '/clenska-zona/moj-profil', settings: '/clenska-zona/nastavenia' }
+  const paths: Record<Tab, string> = { overview: '/clenska-zona', members: '/clenska-zona/clenovia', licenses: '/clenska-zona/licencie', requests: '/clenska-zona/ziadosti', roles: '/clenska-zona/roly', race: '/clenska-zona/preteky', profile: '/clenska-zona/moj-profil', settings: '/clenska-zona/nastavenia', trainings: '/clenska-zona/treningy', marshals: '/clenska-zona/komisari' }
   void navigate(paths[value]); error.value = ''; query.value = ''; statusFilter.value = ''; roleFilter.value = ''
 }
 function edit(member?: Member) {
@@ -220,6 +223,8 @@ function exportCsv(all = false) {
           </section>
         </template>
         <RoleSettings v-else-if="hasPermission('roles.manage') && tab === 'roles'" /><RaceSettings v-else-if="hasPermission('race.manage') && tab === 'race'" />
+        <EventSchedule v-else-if="hasPermission('trainings.manage') && tab === 'trainings'" key="trainings" kind="trainings" manage />
+        <EventSchedule v-else-if="(hasPermission('marshals.read') || hasPermission('marshals.manage')) && tab === 'marshals'" key="marshals" kind="marshal-events" manage />
 <template v-else-if="tab === 'profile'"><p class="eyebrow text-race">Tvoja vizitka v klube</p><h1 class="heading-3 mt-3">Môj profil.</h1><p class="body-6 mt-3 text-ink/55">Udržuj svoje členské údaje aktuálne.</p><div class="mt-8 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]"><form :inert="busy" class="dashboard-card p-6 sm:p-8" @submit.prevent="saveProfile"><h2 class="heading-5 mb-6">Osobné údaje</h2><MemberFields v-model="profile" lock-name /><button class="dashboard-primary mt-8" type="submit">Uložiť zmeny <RaceIcon name="check" /></button></form><aside class="rounded-sm bg-ink p-8 text-white"><span class="eyebrow text-[#fca692]">Členská karta</span><h2 class="heading-5 mt-8">{{ currentMember.name }}</h2><p class="body-6 mt-3 text-muted">{{ currentMember.id }}</p><span class="status-badge mt-6" :class="'status-' + currentMember.status">{{ statusLabels[currentMember.status] }}</span><dl class="body-6 mt-8 grid gap-4"><div><dt class="text-muted">Členom od</dt><dd class="mt-1">{{ date(currentMember.joinedAt) }}</dd></div><div><dt class="text-muted">Príspevok</dt><dd class="mt-1">{{ currentMember.feePaid ? 'Uhradený' : 'Neuhradený' }}</dd></div></dl><MemberLicenseCard :license="currentLicense" /></aside></div></template>
 
         <template v-else-if="hasPermission('roles.manage') && tab === 'settings'"><p class="eyebrow text-race">Klubová evidencia</p><h1 class="heading-3 mt-3">Nastavenia účtu.</h1><div class="dashboard-card mt-8 max-w-3xl p-8"><h2 class="heading-5">Prístup do členskej zóny</h2><p class="body-6 mt-4 text-ink/60">Členské údaje sú uložené na serveri. Oprávnenia spravujete v sekcii Roly. Heslo môžete zmeniť cez obnovenie hesla.</p><AppLink href="/obnova-hesla" class="dashboard-secondary mt-6">Obnoviť heslo</AppLink><button class="dashboard-secondary mt-6" :disabled="!canViewMembers || busy" @click="exportCsv(true)">Exportovať členov</button></div></template>

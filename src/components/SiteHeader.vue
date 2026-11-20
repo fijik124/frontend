@@ -94,6 +94,7 @@ onUnmounted(() => {
           >Preteky <span class="inline-block h-1 w-1 bg-race"></span
         ></AppLink>
         <AppLink class="nav-link" href="/#galeria">Galéria</AppLink>
+        <AppLink class="nav-link" href="/treningy">Tréningy</AppLink>
         <AppLink
           class="nav-link"
           :href="currentMember ? '/clenska-zona' : '/prihlasenie'"
@@ -130,6 +131,7 @@ onUnmounted(() => {
         >Náš klub</AppLink
       >
       <AppLink class="heading-3" href="/preteky">Preteky</AppLink>
+      <AppLink class="heading-3" href="/treningy">Tréningy</AppLink>
       <AppLink class="heading-3" href="/#galeria" @click="menuOpen = false"
         >Galéria</AppLink
       >

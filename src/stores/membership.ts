@@ -8,6 +8,9 @@ export const permissionOptions = [
   { id: 'members.write', name: 'Spravovať členov', description: 'Pridávanie, úprava, schvaľovanie a odstránenie členov.' },
   { id: 'licenses.manage', name: 'Spravovať licencie', description: 'Generovanie licencií a zmena ich platnosti.' },
   { id: 'race.manage', name: 'Spravovať preteky', description: 'Termín, program a informácie o najbližšom podujatí.' },
+  { id: 'trainings.manage', name: 'Spravovať tréningy', description: 'Pridávanie, úprava a rušenie verejných tréningových termínov.' },
+  { id: 'marshals.read', name: 'Zobraziť zónu komisárov', description: 'Interný kalendár podujatí a pokyny pre traťových komisárov.' },
+  { id: 'marshals.manage', name: 'Spravovať podujatia komisárov', description: 'Pridávanie, úprava a rušenie podujatí tímu komisárov.' },
   { id: 'roles.assign', name: 'Priraďovať roly', description: 'Výber prístupovej roly pre členov a nové licencie.' },
   { id: 'roles.manage', name: 'Spravovať roly', description: 'Tvorba a úprava rolí a oprávnení.' },
 ] as const

@@ -43,7 +43,7 @@ const questions = computed(() => [
   {
     question: "Môžem prísť na trať aj trénovať?",
     answer:
-      "Trať slúži aj na tréningy mimo pretekov. Možnosť tréningu závisí od aktuálneho stavu trate, počasia a plánovaných podujatí. Pred návštevou odporúčame overiť si dostupnosť u organizátora.",
+      "Aktuálne termíny nájdeš v sekcii Tréningy v hlavnej navigácii. Pred návštevou skontroluj, či tréning nebol zrušený pre počasie alebo stav trate.",
   },
   {
     question: "Koľko stojí tréning na trati?",

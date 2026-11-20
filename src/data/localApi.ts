@@ -1,11 +1,12 @@
 import type { ClubRole, Member, MemberLicense, Permission } from '../stores/membership'
 import type { RaceConfiguration } from '../stores/race'
+import { emptyEvent, validateEvent, type ClubEvent, type EventInput, type EventKind } from './events'
 
 // This module is loaded only in development. It never calls the backend.
 const storageKey = 'amk:local-data:v1'
 const sessionKey = 'amk:local-session:v1'
 const demoPassword = 'local-demo-2026'
-const permissions: Permission[] = ['members.read', 'members.write', 'licenses.manage', 'race.manage', 'roles.assign', 'roles.manage']
+const permissions: Permission[] = ['members.read', 'members.write', 'licenses.manage', 'race.manage', 'roles.assign', 'roles.manage', 'trainings.manage', 'marshals.read', 'marshals.manage']
 interface LocalData {
   members: Member[]
   licenses: MemberLicense[]
@@ -13,6 +14,8 @@ interface LocalData {
   activity: { id: string; text: string; at: string }[]
   race: RaceConfiguration
   raceVersion: number
+  trainings: ClubEvent[]
+  marshalEvents: ClubEvent[]
   passwords: Record<string, string>
   resets: Record<string, string>
 }
@@ -35,6 +38,7 @@ function seed(): LocalData {
     roles: [
       { id: 'admin', name: 'Správca', description: 'Správa klubu', permissions: [...permissions], protected: true },
       { id: 'member', name: 'Člen', description: 'Členský profil a licencia', permissions: [], protected: false },
+      { id: 'marshal', name: 'Traťový komisár', description: 'Interný kalendár a pokyny tímu', permissions: ['marshals.read'], protected: false },
     ],
     activity: [{ id: id(), text: 'Lokálne ukážkové údaje boli pripravené.', at: joinedAt }],
     race: {
@@ -45,13 +49,21 @@ function seed(): LocalData {
       schedule: [{ id: 'local-training', title: 'Tréning', time: '09:00', description: 'Voľné tréningy' }, { id: 'local-start', title: 'Preteky', time: '11:00', description: 'Štart prvej jazdy' }],
     },
     raceVersion: 1,
+    trainings: [],
+    marshalEvents: [],
     passwords: Object.fromEntries(members.map(member => [member.id, demoPassword])),
     resets: {},
   }
 }
 function load(): LocalData {
   const saved = localStorage.getItem(storageKey)
-  if (saved) return JSON.parse(saved) as LocalData
+  if (saved) {
+    const data = JSON.parse(saved) as LocalData
+    data.trainings ??= []; data.marshalEvents ??= []
+    const admin = data.roles.find(role => role.id === 'admin')
+    if (admin) admin.permissions = [...permissions]
+    return data
+  }
   const data = seed()
   localStorage.setItem(storageKey, JSON.stringify(data))
   return data
@@ -82,6 +94,7 @@ export async function localApiResponse(path: string, options: RequestInit = {}):
     license.status === 'available' && (!license.validUntil || license.validUntil >= new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bratislava' }).format(new Date())))
 
   if (path === '/race' && method === 'GET') return reply(data.race, 200, { ETag: `"${data.raceVersion}"` })
+  if (path === '/trainings' && method === 'GET') return reply(data.trainings)
   if (path === '/auth/sign-in/email' && method === 'POST') {
     const member = data.members.find(item => item.email.toLowerCase() === email())
     if (!member || data.passwords[member.id] !== body.password || member.status === 'inactive') return error(401, 'Nesprávny email alebo heslo.')
@@ -124,6 +137,28 @@ export async function localApiResponse(path: string, options: RequestInit = {}):
   }
 
   if (!me || me.status === 'inactive') return error(401, 'Prihláste sa do členskej zóny.')
+  const eventMatch = path.match(/^\/(trainings|marshal-events)(?:\/([^/]+))?$/)
+  if (eventMatch) {
+    const kind = eventMatch[1] as EventKind
+    const list = kind === 'trainings' ? data.trainings : data.marshalEvents
+    const eventId = eventMatch[2] ? decodeURIComponent(eventMatch[2]) : ''
+    if (method === 'GET' && !eventId && kind === 'marshal-events') return can('marshals.read') || can('marshals.manage') ? reply(list) : error(403, 'Nemáte oprávnenie zobraziť zónu komisárov.')
+    if (method !== 'POST' && method !== 'PUT') return error(405, 'Táto operácia nie je podporovaná.')
+    if (!can(kind === 'trainings' ? 'trainings.manage' : 'marshals.manage')) return error(403, 'Nemáte oprávnenie spravovať tieto termíny.')
+    if ((method === 'POST' && eventId) || (method === 'PUT' && !eventId)) return error(405, 'Táto operácia nie je podporovaná.')
+    const event = eventId ? list.find(item => item.id === eventId) : undefined
+    if (eventId && !event) return error(404, 'Termín neexistuje.')
+    if (event && new Headers(options.headers).get('If-Match') !== `"${event.version}"`) return error(412, 'Termín sa medzitým zmenil. Zavri formulár, obnov stránku a zopakuj úpravu.')
+    const invalid = validateEvent(body as unknown as EventInput)
+    if (invalid) return error(400, invalid)
+    const input = Object.fromEntries(Object.keys(emptyEvent()).map(key => [key, typeof body[key] === 'string' ? value(key) : body[key]])) as unknown as EventInput
+    if (!input.cancelled) input.cancellationReason = ''
+    const result: ClubEvent = { ...input, id: event?.id ?? id(), version: (event?.version ?? 0) + 1 }
+    if (event) Object.assign(event, result)
+    else list.push(result)
+    log(kind === 'trainings' ? `Tréning: ${result.title}${result.cancelled ? ' (zrušené)' : ''}` : 'Podujatie komisárov bolo uložené.')
+    return save(result, event ? 200 : 201)
+  }
   if (path === '/me' && method === 'GET') return reply({ member: me, license: data.licenses.find(license => license.memberId === me.id) ?? null, permissions: granted })
   if (path === '/me' && method === 'PATCH') {
     me.phone = value('phone'); me.number = value('number')

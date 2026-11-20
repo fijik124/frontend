@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-withDefaults(defineProps<{ name?: 'arrow' | 'external' | 'pin' | 'expand' | 'helmet' | 'flag' | 'people' | 'grid' | 'mail' | 'settings' | 'logout' | 'plus' | 'check' | 'download' | 'search' | 'edit' }>(), { name: 'arrow' })
+withDefaults(defineProps<{ name?: 'arrow' | 'external' | 'pin' | 'expand' | 'helmet' | 'flag' | 'people' | 'grid' | 'mail' | 'settings' | 'logout' | 'plus' | 'check' | 'download' | 'search' | 'edit' | 'calendar' }>(), { name: 'arrow' })
 </script>
 <template>
   <svg class="race-icon shrink-0" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -15,6 +15,7 @@ withDefaults(defineProps<{ name?: 'arrow' | 'external' | 'pin' | 'expand' | 'hel
     <path v-else-if="name === 'logout'" d="M96 40H48v176h48m64-136 48 48-48 48m-64-48h112" />
     <path v-else-if="name === 'plus'" d="M128 48v160M48 128h160" />
     <path v-else-if="name === 'check'" d="m40 136 56 56L216 72" />
+    <template v-else-if="name === 'calendar'"><rect x="40" y="48" width="176" height="176" rx="8" /><path d="M40 96h176M80 32v32m96-32v32M80 136h16m32 0h16m32 0h8M80 176h16m32 0h16" /></template>
     <path v-else-if="name === 'download'" d="M128 32v128m-48-48 48 48 48-48M40 168v48h176v-48" />
     <template v-else-if="name === 'search'"><circle cx="112" cy="112" r="72" /><path d="m164 164 60 60" /></template>
     <path v-else-if="name === 'edit'" d="m168 40 48 48L88 216H40v-48L168 40Zm-16 16 48 48M40 168l48 48" />
