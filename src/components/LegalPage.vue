@@ -6,7 +6,6 @@ import { legalConfig, legalReady, legalValue } from '../config/legal'
 
 const props = defineProps<{ document: LegalDocumentId }>()
 const content = computed(() => legalDocuments[props.document])
-const isDevelopment = import.meta.env.DEV
 </script>
 
 <template>
@@ -18,13 +17,12 @@ const isDevelopment = import.meta.env.DEV
           <p class="eyebrow text-race">OŠK AMK Veľký Klíž / Právne informácie</p>
           <h1 class="heading-2 mt-4">{{ content.title }}</h1>
           <p class="body-3 mt-6 text-ink/70">{{ content.description }}</p>
-          <p class="caption-4 mt-6 text-ink/60">Verzia {{ legalConfig.version }} · Účinnosť: {{ legalValue(legalConfig.effectiveDate) }}</p>
+          <p class="caption-4 mt-6 text-ink/60">Verzia {{ legalConfig.version }} · {{ legalReady ? `Účinnosť: ${legalValue(legalConfig.effectiveDate)}` : 'Návrh čakajúci na overenie a schválenie' }}</p>
         </header>
         <aside v-if="!legalReady" class="body-6 mt-8 rounded-sm border border-amber-700/30 bg-amber-50 p-6 text-amber-950" aria-label="Stav dokumentu">
           <p class="title-3">Návrh pred zverejnením</p>
           <p class="mt-2">Prevádzkovateľ ešte musí doplniť označené údaje, potvrdiť skutočné nastavenie služieb a schváliť konečné znenie. Tento návrh nie je potvrdením úplného právneho súladu.</p>
         </aside>
-        <p v-if="isDevelopment" class="body-6 mt-6 rounded-sm border border-ink/15 p-4">Lokálna vývojová ukážka používa iba fiktívne údaje v tomto prehliadači. Informácie o produkcii sa vzťahujú na nasadenú členskú zónu.</p>
         <nav aria-label="Súvisiace dokumenty" class="body-6 mt-8 flex flex-wrap gap-4">
           <AppLink v-for="item in legalNavigation" :key="item.id" :href="item.href" class="rounded-sm border border-ink/20 px-3 py-2 hover:bg-ink/5 active:scale-[.98]" :class="item.id === document ? 'bg-ink text-white hover:bg-ink' : ''">{{ item.label }}</AppLink>
         </nav>
